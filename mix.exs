@@ -24,6 +24,7 @@ defmodule AmqpHelpers.MixProject do
   defp deps do
     [
       {:amqp, "~> 2.1"},
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.14", only: :test, optional: true},
       {:mox, "~> 1.0", only: :test}
     ]
