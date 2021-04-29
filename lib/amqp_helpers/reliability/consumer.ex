@@ -43,6 +43,9 @@ defmodule AMQPHelpers.Reliability.Consumer do
     GenServer.start_link(__MODULE__, consumer_opts, genserver_opts)
   end
 
+  # TODO: Add a call to check the current state
+  # TODO: Add an option to crash: :never, :on_failure, :always
+
   #
   # Server Implementation
   #

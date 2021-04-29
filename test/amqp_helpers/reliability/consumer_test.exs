@@ -247,6 +247,8 @@ defmodule AMQPHelpers.Reliability.ConsumerTest do
     end
   end
 
+  # TODO: Check logging
+
   #
   # Helpers
   #
