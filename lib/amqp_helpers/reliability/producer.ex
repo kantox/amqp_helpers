@@ -9,9 +9,6 @@ defmodule AMQPHelpers.Reliability.Producer do
 
   alias AMQPHelpers.WaitGroup
 
-  @default_retry_interval 500
-  @default_publish_timeout 5_000
-
   @typedoc "TODO"
   @type option ::
           GenServer.option()
@@ -23,6 +20,9 @@ defmodule AMQPHelpers.Reliability.Producer do
   @typedoc "TODO"
   @type options :: [option()]
 
+  @default_adapter AMQPHelpers.Adapters.AMQP
+  @default_publish_timeout 5_000
+  @default_retry_interval 1_000
   @producer_options ~w(adapter setup_channel_on_init channel_name retry_interval)a
 
   #
@@ -72,7 +72,7 @@ defmodule AMQPHelpers.Reliability.Producer do
   @impl true
   def init(opts) do
     state = %{
-      adapter: Keyword.get(opts, :adapter, AMQPHelpers.Adapters.AMQP),
+      adapter: Keyword.get(opts, :adapter, @default_adapter),
       chan: nil,
       chan_monitor: nil,
       chan_name: Keyword.get(opts, :channel_name, :default),

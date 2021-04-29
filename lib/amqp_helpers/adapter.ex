@@ -6,6 +6,11 @@ defmodule AMQPHelpers.Adapter do
   @doc """
   TODO
   """
+  @callback ack(AMQP.Channel.t(), integer(), keyword()) :: :ok | {:error, term()}
+
+  @doc """
+  TODO
+  """
   @callback consume(AMQP.Channel.t(), String.t(), pid() | nil, keyword()) ::
               {:ok, String.t()} | AMQP.Basic.error()
 
@@ -25,6 +30,11 @@ defmodule AMQPHelpers.Adapter do
   TODO
   """
   @callback get_next_delivery_tag(AMQP.Channel.t()) :: non_neg_integer()
+
+  @doc """
+  TODO
+  """
+  @callback nack(AMQP.Channel.t(), integer(), keyword()) :: :ok | {:error, term()}
 
   @doc """
   TODO
@@ -51,4 +61,9 @@ defmodule AMQPHelpers.Adapter do
   TODO
   """
   @callback select_confirm(AMQP.Channel.t()) :: :ok | {:error, any()}
+
+  @doc """
+  TODO
+  """
+  @callback set_channel_options(AMQP.Channel.t(), keyword()) :: :ok | {:error, any()}
 end

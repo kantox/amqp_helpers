@@ -308,6 +308,10 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
     end
   end
 
+  #
+  # Helpers
+  #
+
   defp prepare_producer(context) do
     producer_opts =
       Keyword.merge(

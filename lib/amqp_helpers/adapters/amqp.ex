@@ -6,6 +6,9 @@ defmodule AMQPHelpers.Adapters.AMQP do
   @behaviour AMQPHelpers.Adapter
 
   @impl true
+  defdelegate ack(channel, delivery_tag, options), to: AMQP.Basic
+
+  @impl true
   defdelegate consume(channel, queue, consumer_pid, options), to: AMQP.Basic
 
   @impl true
@@ -18,6 +21,9 @@ defmodule AMQPHelpers.Adapters.AMQP do
   defdelegate get_next_delivery_tag(channel), to: AMQP.Confirm, as: :next_publish_seqno
 
   @impl true
+  defdelegate nack(channel, delivery_tag, options), to: AMQP.Basic
+
+  @impl true
   defdelegate publish(channel, exchange, routing_key, payload, options), to: AMQP.Basic
 
   @impl true
@@ -28,4 +34,7 @@ defmodule AMQPHelpers.Adapters.AMQP do
 
   @impl true
   defdelegate select_confirm(channel), to: AMQP.Confirm, as: :select
+
+  @impl true
+  defdelegate set_channel_options(channel, options), to: AMQP.Basic, as: :qos
 end

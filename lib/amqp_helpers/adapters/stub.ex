@@ -8,6 +8,13 @@ defmodule AMQPHelpers.Adapters.Stub do
   require Logger
 
   @impl true
+  def ack(channel, delivery_tag, options) do
+    log(:ack, [channel, delivery_tag, options])
+
+    :ok
+  end
+
+  @impl true
   def consume(channel, queue, consumer_pid, options) do
     log(:consume, [channel, queue, consumer_pid, options])
 
@@ -45,6 +52,13 @@ defmodule AMQPHelpers.Adapters.Stub do
   end
 
   @impl true
+  def nack(channel, delivery_tag, options) do
+    log(:nack, [channel, delivery_tag, options])
+
+    :ok
+  end
+
+  @impl true
   def publish(chan, exchange, routing_key, payload, options) do
     log(:publish, [chan, exchange, routing_key, payload, options])
 
@@ -79,6 +93,13 @@ defmodule AMQPHelpers.Adapters.Stub do
   @impl true
   def select_confirm(chan) do
     log(:select_confirm, [chan])
+
+    :ok
+  end
+
+  @impl true
+  def set_channel_options(chan, options) do
+    log(:set_channel_options, [chan, options])
 
     :ok
   end
