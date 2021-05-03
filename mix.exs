@@ -7,26 +7,36 @@ defmodule AmqpHelpers.MixProject do
       version: "0.1.0",
       elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
+      dialyzer: dialyzer(),
       deps: deps(),
+      aliases: aliases(),
       test_coverage: test_coverage(),
       preferred_cli_env: preferred_cli_env()
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
-    [
-      extra_applications: [:logger]
-    ]
+    [extra_applications: [:logger]]
   end
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
       {:amqp, "~> 2.1"},
-      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.5", only: [:dev, :test], optional: true, runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], optional: true, runtime: false},
       {:excoveralls, "~> 0.14", only: :test, optional: true},
       {:mox, "~> 1.0", only: :test}
+    ]
+  end
+
+  defp aliases do
+    [cached_dialyzer: &run_cached_dialyzer/1]
+  end
+
+  defp dialyzer do
+    [
+      plt_add_apps: [],
+      plt_file: {:no_warn, "_build/plts/dialyzer.plt"}
     ]
   end
 
@@ -36,5 +46,19 @@ defmodule AmqpHelpers.MixProject do
 
   defp preferred_cli_env do
     [coveralls: :test, "coveralls.github": :test, "coveralls.html": :test]
+  end
+
+  defp run_cached_dialyzer(args) do
+    {:no_warn, plt_file} = dialyzer()[:plt_file]
+
+    try do
+      :dialyzer_plt.from_file(plt_file)
+    rescue
+      _error -> plt_file |> Path.dirname() |> File.rm_rf()
+    catch
+      _error -> plt_file |> Path.dirname() |> File.rm_rf()
+    end
+
+    Mix.Task.run("dialyzer", args)
   end
 end
