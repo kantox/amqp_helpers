@@ -1,5 +1,7 @@
 # AMQP Helpers
 
+[![Coverage Status](https://coveralls.io/repos/github/kantox/amqp_helpers/badge.svg?branch=main&t=VbtrhR)](https://coveralls.io/github/kantox/amqp_helpers?branch=main)
+
 Non opinioned [AMQP](https://github.com/pma/amqp) helpers that implement common
 utilities for several [AMQP](https://www.amqp.org/)/[RabbitMQ](https://www.rabbitmq.com/)
 scenarios.
