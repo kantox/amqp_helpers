@@ -37,11 +37,48 @@ at any cost.
 
 ### Comparisons With Other Libraries
 
-**TODO**
+This is how this library relates to other available libraries in order to
+highlight the motivation behind this library:
+
+- [**AMQP**](https://hexdocs.pm/amqp/readme.html): this library is not a
+  replacement in any way to this library, but a companion.
+- [**AMQPx**](https://hexdocs.pm/amqpx): in some way, similar to this library,
+  but not tied to any particular use case and some of its functionality has been
+  superseded by `AMQP` v2.x.
+- [**Broadway**](https://hexdocs.pm/broadway/Broadway.html): this is an
+  abstraction for message processing, which cannot be compared directly to this
+  library. [`broadway_rabbitmq`](https://github.com/dashbitco/broadway_rabbitmq)
+  is a connector for `AMQP` and can be adapted to use this library if needed.
+  Nevertheless, unless you want to support multiple transports, most of the
+  features provided by `Broadway` can be implemented directly by using some
+  _RabbitMQ_/_AMQP_ features (there are exceptions like graceful shutdown).
+- [**GenAmqp**](https://hexdocs.pm/gen_amqp): provides some utilities in the
+  same way that this library, but not tied to any specific use case. Also, some
+  of its functionality has been superseded by `AMQP` v2.x.
+- [**PlugAmqp**](https://hexdocs.pm/rambla/getting-started.html): It will use
+  this library, but have different purposes (it implements _RPC_ pattern over
+  _AMQP_).
+- [**Rambla**](https://hexdocs.pm/rambla/getting-started.html): similar to
+  `Broadway`, but from the publishing point of view.
+
+In summary, this library provides helpers tied to specific use cases of _AMQP_,
+without any kind of abstraction over it. If you are looking to support
+different kinds of transports in your library, check out libraries like
+`Broadway` or `Rambla`.
 
 ## AMQP Good Practices
 
-**TODO (two connections, mox and adapters)**
+This library enforces some good practices that have no downside for any
+application using _AMQP_ and ease the development of _AMQP_ related features.
+
+The first one is the use of an _AMQP_ implementation behind a behaviour, called
+`AMQPHelpers.Adapter`. This allow us to provide stub, mocks or even different
+transport layers that mimic the _AMQP_ interface.
+
+The second one is the use of [application connection/channels](`AMQP.Application`).
+This an _AMQP_ v2.x feature which replaces (or aid) previous connections
+supervisors or channel pools. As general thumb rule, your application should
+have at most two connection (in/out) and one channel per multiplexing process.
 
 ## User Case Scenarios
 
