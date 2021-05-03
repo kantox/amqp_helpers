@@ -3,8 +3,7 @@
 [![Build and Test](https://github.com/kantox/amqp_helpers/actions/workflows/build-test.yml/badge.svg)](https://github.com/kantox/amqp_helpers/actions/workflows/build-test.yml)
 [![Coverage Status](https://coveralls.io/repos/github/kantox/amqp_helpers/badge.svg?branch=main&t=VbtrhR)](https://coveralls.io/github/kantox/amqp_helpers?branch=main)
 
-Non opinioned [AMQP](https://github.com/pma/amqp) helpers that implement common
-utilities for several [AMQP](https://www.amqp.org/)/[RabbitMQ](https://www.rabbitmq.com/)
+Non opinionated [AMQP](https://github.com/pma/amqp) helpers for common
 scenarios.
 
 ## Installation
