@@ -32,7 +32,7 @@ defmodule AMQPHelpers.Adapters.Stub do
     conn_pid = Process.spawn(fn -> Process.sleep(:infinity) end, [])
     conn = %AMQP.Connection{pid: conn_pid}
 
-    {:ok, chan_pid} = Agent.start(fn -> %{confirm_handler: nil, delivery_tag: 1} end)
+    chan_pid = Process.spawn(fn -> Process.sleep(:infinity) end, [])
     chan = %AMQP.Channel{conn: conn, pid: chan_pid}
 
     {:ok, chan}
@@ -73,23 +73,12 @@ defmodule AMQPHelpers.Adapters.Stub do
   def publish(chan, exchange, routing_key, payload, options) do
     log(:publish, [chan, exchange, routing_key, payload, options])
 
-    %{confirm_handler: confirm_handler, delivery_tag: delivery_tag} =
-      Agent.get_and_update(chan.pid, fn state ->
-        {state, %{state | delivery_tag: state.delivery_tag + 1}}
-      end)
-
-    unless is_nil(confirm_handler) do
-      send(confirm_handler, {:basic_ack, delivery_tag, false})
-    end
-
     :ok
   end
 
   @impl true
   def register_confirm_handler(chan, handler) do
     log(:register_confirm_handler, [chan, handler])
-
-    Agent.update(chan.pid, fn state -> %{state | confirm_handler: handler} end)
 
     :ok
   end
