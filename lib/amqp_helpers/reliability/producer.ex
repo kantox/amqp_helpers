@@ -194,7 +194,7 @@ defmodule AMQPHelpers.Reliability.Producer do
 
   def terminate(_reason, _state), do: :ok
 
-  @spec enable_publisher_confirms(module, AMQP.Channel.channel()) ::
+  @spec enable_publisher_confirms(module, AMQP.Channel.t()) ::
           {:ok, non_neg_integer()} | :error
   defp enable_publisher_confirms(adapter, chan) do
     with :ok <- adapter.register_confirm_handler(chan, self()),
