@@ -62,7 +62,7 @@ To achieve the best performance in terms of message delivery some trade-off must
 be done, which usually impacts the reliability and/or coherence of the system.
 
 Durability should be disabled. In other words, messages will not be persisted,
-so messages could be lost in a broker outage scenario. This can be achieved by
+so messages could be lost in a broker outage scenario. This can be configured by
 declaring queues as non-durable and publishing messages with `persistent` set to
 `false`.
 
@@ -70,15 +70,28 @@ Acknowledges, from any communication direction, should be disabled. This means
 that the publisher should not confirm deliveries, and consumers should not
 acknowledge messages. Messages could be lost on the flight because of network or
 edge issues. Publisher confirms are not enabled by default, so nothing has to be
-done here in terms of publishing. Consuming requires disabling acknowledging,
-which can be done by setting the `no_ack` flag on.
+done in terms of publishing. Consuming requires disabling acknowledging, which
+can be done by setting the `no_ack` flag on.
 
 The `AMQPHelpers.HighThroughput` module provides functions that enforce these
 requirements for publishing and consuming. These are simple wrappers around
 _AMQP_ library functions. They add very little aside from being explicit about
 a feature of some scenario (performance intensive).
 
-**TODO (AMQP schema properties: max-length, disable lazy queues, diable HA)**
+Some other considerations should have taken into account when declaring queues
+for this purpose, which are:
+
+- `x-max-length` or `x-max-length-bytes` with `x-expires` and `x-messages-ttl`
+  should be used to avoid large queues. Large queues slowdown message delivery.
+  This option limits the size of the queue to a known threshold.
+
+- `x-queue-mode` should **not** be `"lazy"` to avoid moving messages to disk.
+
+- Queues should not be replicated, nor enabling [high availability](https://www.rabbitmq.com/ha.html)
+  nor using [quorum queues](https://www.rabbitmq.com/quorum-queues.html). Both
+  method have implications in the performance of the queue.
+
+- `durable` should be set to `false`.
 
 ### Reliability
 

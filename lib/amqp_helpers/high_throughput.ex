@@ -1,6 +1,10 @@
 defmodule AMQPHelpers.HighThroughput do
   @moduledoc """
-  TODO
+  Utilities for dealing with high-throughput scenarios.
+
+  This module provides a couple of functions which enforce some options to
+  achieve good results on high throughput scenarios. Review the
+  [High Throughput section](readme.html#high-throughput) for more information.
   """
 
   require Logger
@@ -9,7 +13,10 @@ defmodule AMQPHelpers.HighThroughput do
   alias AMQPHelpers.Adapters.AMQP, as: Adapter
 
   @doc """
-  TODO
+  Registers a queue consumer process.
+
+  Like `AMQP.Basic.consume/4` but enforces options which play nicely with a high
+  throughput scenario.
   """
   @spec consume(module, AMQP.Channel.t(), String.t(), pid() | nil, keyword()) ::
           {:ok, String.t()} | AMQPBasic.error()
@@ -20,7 +27,10 @@ defmodule AMQPHelpers.HighThroughput do
   end
 
   @doc """
-  TODO
+  Publishes a message to an Exchange.
+
+  Like `AMQP.Basic.publish/5` but enforces options which play nicely with a high
+  throughput scenario.
   """
   @spec publish(
           module,

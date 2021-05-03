@@ -4,6 +4,7 @@ defmodule AmqpHelpers.MixProject do
   def project do
     [
       app: :amqp_helpers,
+      name: "AMQP Helpers",
       version: "0.1.0",
       elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
@@ -44,6 +45,7 @@ defmodule AmqpHelpers.MixProject do
 
   defp docs do
     [
+      main: "readme",
       extras: ["README.md"]
     ]
   end
