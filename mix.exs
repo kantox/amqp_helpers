@@ -55,7 +55,7 @@ defmodule AmqpHelpers.MixProject do
   defp package do
     [
       files: ["lib", "mix.exs", "README.md"],
-      licenses: "UNLICENSED",
+      licenses: ["UNLICENSED"],
       links: %{"Github" => "https://github.com/kantox/amqp_helpers"},
       organization: "kantox"
     ]
