@@ -10,6 +10,7 @@ defmodule AmqpHelpers.MixProject do
       dialyzer: dialyzer(),
       deps: deps(),
       aliases: aliases(),
+      docs: docs(),
       test_coverage: test_coverage(),
       preferred_cli_env: preferred_cli_env()
     ]
@@ -22,8 +23,9 @@ defmodule AmqpHelpers.MixProject do
   defp deps do
     [
       {:amqp, "~> 2.1"},
-      {:credo, "~> 1.5", only: [:dev, :test], optional: true, runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev, :test], optional: true, runtime: false},
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.24", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14", only: :test, optional: true},
       {:mox, "~> 1.0", only: :test}
     ]
@@ -37,6 +39,12 @@ defmodule AmqpHelpers.MixProject do
     [
       plt_add_apps: [],
       plt_file: {:no_warn, "_build/plts/dialyzer.plt"}
+    ]
+  end
+
+  defp docs do
+    [
+      extras: ["README.md"]
     ]
   end
 

@@ -103,10 +103,10 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
         :ok
       end)
 
-      expect(AMQPMock, :select_confirm, fn inner_chan ->
+      expect(AMQPMock, :enable_select_confirm, fn inner_chan ->
         assert inner_chan == chan
 
-        send(parent, {ref, :select_confirm})
+        send(parent, {ref, :enable_select_confirm})
 
         :ok
       end)
@@ -114,7 +114,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
       Producer.setup_channel(producer)
 
       assert_receive {^ref, :register_confirm_handler}
-      assert_receive {^ref, :select_confirm}
+      assert_receive {^ref, :enable_select_confirm}
       assert Process.alive?(producer)
     end
 

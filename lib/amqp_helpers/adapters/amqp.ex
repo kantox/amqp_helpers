@@ -1,6 +1,10 @@
 defmodule AMQPHelpers.Adapters.AMQP do
   @moduledoc """
-  TODO
+  A `AMQPHelpers.Adapter` which relies in `AMQP` lib.
+
+  This module uses `AMQP` to implement the `AMQPHelpers.Adapter`. This is
+  probably the adapter that you want to use for production or integration tests
+  because it uses the actual `AMQP` interface.
   """
 
   @behaviour AMQPHelpers.Adapter
@@ -10,6 +14,9 @@ defmodule AMQPHelpers.Adapters.AMQP do
 
   @impl true
   defdelegate consume(channel, queue, consumer_pid, options), to: AMQP.Basic
+
+  @impl true
+  defdelegate enable_select_confirm(channel), to: AMQP.Confirm, as: :select
 
   @impl true
   defdelegate fetch_application_channel(name), to: AMQP.Application, as: :get_channel
@@ -31,9 +38,6 @@ defmodule AMQPHelpers.Adapters.AMQP do
 
   @impl true
   defdelegate register_return_handler(channel, handler), to: AMQP.Basic, as: :return
-
-  @impl true
-  defdelegate select_confirm(channel), to: AMQP.Confirm, as: :select
 
   @impl true
   defdelegate set_channel_options(channel, options), to: AMQP.Basic, as: :qos

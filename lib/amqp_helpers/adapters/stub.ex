@@ -35,6 +35,13 @@ defmodule AMQPHelpers.Adapters.Stub do
   end
 
   @impl true
+  def enable_select_confirm(chan) do
+    log(:enable_select_confirm, [chan])
+
+    :ok
+  end
+
+  @impl true
   def fetch_application_connection(name) do
     log(:fetch_application_connection, [name])
 
@@ -86,13 +93,6 @@ defmodule AMQPHelpers.Adapters.Stub do
   @impl true
   def register_return_handler(chan, handler) do
     log(:register_reeturn_handler, [chan, handler])
-
-    :ok
-  end
-
-  @impl true
-  def select_confirm(chan) do
-    log(:select_confirm, [chan])
 
     :ok
   end

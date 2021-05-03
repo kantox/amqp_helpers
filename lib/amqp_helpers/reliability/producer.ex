@@ -199,7 +199,7 @@ defmodule AMQPHelpers.Reliability.Producer do
   defp enable_publisher_confirms(adapter, chan) do
     with :ok <- adapter.register_confirm_handler(chan, self()),
          :ok <- adapter.register_return_handler(chan, self()),
-         :ok <- adapter.select_confirm(chan) do
+         :ok <- adapter.enable_select_confirm(chan) do
       {:ok, adapter.get_next_delivery_tag(chan)}
     end
   end
