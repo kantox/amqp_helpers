@@ -5,6 +5,7 @@ defmodule AmqpHelpers.MixProject do
     [
       app: :amqp_helpers,
       name: "AMQP Helpers",
+      description: "Non opinionated AMQP helpers",
       version: "0.1.0",
       elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
@@ -12,6 +13,7 @@ defmodule AmqpHelpers.MixProject do
       deps: deps(),
       aliases: aliases(),
       docs: docs(),
+      package: package(),
       test_coverage: test_coverage(),
       preferred_cli_env: preferred_cli_env()
     ]
@@ -47,6 +49,15 @@ defmodule AmqpHelpers.MixProject do
     [
       main: "readme",
       extras: ["README.md"]
+    ]
+  end
+
+  defp package do
+    [
+      files: ["lib", "mix.exs", "README.md"],
+      licenses: "UNLICENSED",
+      links: %{"Github" => "https://github.com/kantox/amqp_helpers"},
+      organization: "kantox"
     ]
   end
 
