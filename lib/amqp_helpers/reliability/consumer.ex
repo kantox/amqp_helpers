@@ -62,7 +62,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
       consume_opts: Keyword.get(opts, :consume_options, []),
       consume_retry_ref: nil,
       consumer_tag: nil,
-      message_handler: Keyword.get(opts, :message_handler),
+      message_handler: Keyword.fetch!(opts, :message_handler),
       queue_name: Keyword.fetch!(opts, :queue_name),
       retry_interval: Keyword.get(opts, :retry_interval, @default_retry_interval)
     }
