@@ -13,6 +13,12 @@ defmodule AMQPHelpers.Adapters.AMQP do
   defdelegate ack(channel, delivery_tag, options), to: AMQP.Basic
 
   @impl true
+  defdelegate cancel_consume(channel, consumer_tag, options), to: AMQP.Basic, as: :cancel
+
+  @impl true
+  defdelegate close_channel(channel), to: AMQP.Channel, as: :close
+
+  @impl true
   defdelegate consume(channel, queue, consumer_pid, options), to: AMQP.Basic
 
   @impl true

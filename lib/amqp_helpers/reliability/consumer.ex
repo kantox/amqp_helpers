@@ -22,11 +22,12 @@ defmodule AMQPHelpers.Reliability.Consumer do
           | {:prefetch_size, non_neg_integer()}
           | {:queue_name, binary()}
           | {:retry_interval, non_neg_integer()}
+          | {:shutdown_gracefully, boolean()}
 
   @typedoc "TODO"
   @type options :: [option()]
 
-  @consumer_options ~w(adapter channel_name consume_on_init message_handler prefetch_count prefetch_size queue_name retry_interval)a
+  @consumer_options ~w(adapter channel_name consume_on_init message_handler prefetch_count prefetch_size queue_name retry_interval shutdown_gracefully)a
   @default_adapter AMQPHelpers.Adapters.AMQP
   @default_retry_interval 1_000
 
@@ -65,6 +66,8 @@ defmodule AMQPHelpers.Reliability.Consumer do
       queue_name: Keyword.fetch!(opts, :queue_name),
       retry_interval: Keyword.get(opts, :retry_interval, @default_retry_interval)
     }
+
+    Process.flag(:trap_exit, Keyword.get(opts, :shutdown_gracefully, false))
 
     if Keyword.get(opts, :consume_on_init, true) do
       {:ok, state, {:continue, :try_open_channel}}
@@ -138,12 +141,16 @@ defmodule AMQPHelpers.Reliability.Consumer do
 
   @impl true
   def handle_info({:DOWN, _ref, :process, chan, _reason}, state = %{chan: %{pid: chan}}) do
-    state = %{state | chan: nil, chan_retry_ref: nil}
+    state = %{state | chan: nil, chan_retry_ref: nil, consumer_tag: nil}
 
     {:noreply, state, {:continue, :try_open_channel}}
   end
 
   def handle_info({:DOWN, _ref, :process, _pid, _reason}, state), do: {:noreply, state}
+
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, state), do: {:noreply, state}
+
+  def handle_info({:EXIT, _pid, _reason}, state), do: {:noreply, state}
 
   # Retry Opening Channel
 
@@ -193,13 +200,26 @@ defmodule AMQPHelpers.Reliability.Consumer do
   def handle_info({:basic_cancel, _meta}, state) do
     Logger.warn("Consumer has been unexpectedly cancelled")
 
-    {:noreply, state, {:continue, :try_consume}}
+    {:noreply, %{state | consumer_tag: nil}, {:continue, :try_consume}}
   end
 
   def handle_info({:basic_cancel_ok, _meta}, state) do
     Logger.warn("Consumer cancelled")
 
-    {:noreply, state, {:continue, :try_consume}}
+    {:noreply, %{state | consumer_tag: nil}, {:continue, :try_consume}}
+  end
+
+  @impl true
+  def terminate(reason, %{adapter: adapter, chan: chan, consumer_tag: consumer_tag}) do
+    unless is_nil(chan) do
+      unless is_nil(consumer_tag) do
+        adapter.cancel_consume(chan, consumer_tag, [])
+      end
+
+      adapter.close_channel(chan)
+    end
+
+    reason
   end
 
   #

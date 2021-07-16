@@ -19,6 +19,20 @@ defmodule AMQPHelpers.Adapters.Stub do
   end
 
   @impl true
+  def cancel_consume(channel, consumer_tag, options) do
+    log(:cancel_consume, [channel, consumer_tag, options])
+
+    {:ok, consumer_tag}
+  end
+
+  @impl true
+  def close_channel(channel) do
+    log(:close_channel, [channel])
+
+    :ok
+  end
+
+  @impl true
   def consume(channel, queue, consumer_pid, options) do
     log(:consume, [channel, queue, consumer_pid, options])
 

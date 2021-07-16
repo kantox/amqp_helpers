@@ -22,6 +22,24 @@ defmodule AMQPHelpers.Adapter do
               :ok | {:error, term()}
 
   @doc """
+  Stops the given consumer from consuming.
+
+  See `AMQP.Basic.cancel/3`.
+  """
+  @callback cancel_consume(
+              channel :: AMQP.Channel.t(),
+              consumer_tag :: String.t(),
+              opts :: keyword()
+            ) :: {:ok, String.t()} | {:error, term()}
+
+  @doc """
+  Closes an open Channel.
+
+  See `AMQP.Channel.close/1`.
+  """
+  @callback close_channel(channel :: AMQP.Channel.t()) :: :ok | {:error, term()}
+
+  @doc """
   Registers a queue consumer process.
 
   See `AMQP.Basic.consume/4`.
@@ -31,8 +49,7 @@ defmodule AMQPHelpers.Adapter do
               queue :: String.t(),
               consumer :: pid() | nil,
               options :: keyword()
-            ) ::
-              {:ok, String.t()} | AMQP.Basic.error()
+            ) :: {:ok, String.t()} | AMQP.Basic.error()
 
   @doc """
   Activates publishing confirmations on the channel.

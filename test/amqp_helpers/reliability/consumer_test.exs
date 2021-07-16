@@ -110,6 +110,23 @@ defmodule AMQPHelpers.Reliability.ConsumerTest do
 
       assert_receive {^ref, :set_channel_options}
     end
+
+    @tag consumer_opts: [shutdown_gracefully: true]
+    test "is closed when shutdown_gracefully is enabled", %{consumer: consumer} do
+      {parent, ref} = {self(), make_ref()}
+
+      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+
+      Consumer.consume(consumer)
+
+      expect(AMQPMock, :close_channel, fn _chan ->
+        send(parent, {ref, :close_channel})
+      end)
+
+      stop_supervised!(Consumer)
+
+      assert_receive {^ref, :close_channel}
+    end
   end
 
   describe "consume" do
@@ -244,6 +261,23 @@ defmodule AMQPHelpers.Reliability.ConsumerTest do
       send(consumer, {:basic_deliver, "bar", %{delivery_tag: 1}})
 
       assert_receive {^ref, :nack}
+    end
+
+    @tag consumer_opts: [shutdown_gracefully: true]
+    test "is canceled when shutdown_gracefully is enabled", %{consumer: consumer} do
+      {parent, ref} = {self(), make_ref()}
+
+      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+
+      Consumer.consume(consumer)
+
+      expect(AMQPMock, :cancel_consume, fn _chan, _consumer_tag, _opts ->
+        send(parent, {ref, :cancel_consume})
+      end)
+
+      stop_supervised!(Consumer)
+
+      assert_receive {^ref, :cancel_consume}
     end
   end
 
