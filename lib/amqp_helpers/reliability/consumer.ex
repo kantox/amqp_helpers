@@ -1,16 +1,56 @@
 defmodule AMQPHelpers.Reliability.Consumer do
   @moduledoc """
-  TODO
+  A consumer for dealing with reliability scenarios.
+
+  A `AMQPHelpers.Reliability.Consumer` is process which manages a reliable
+  consume operation over *AMQP*, where messages are acknowledge to the broker
+  after processing them. Pair this process with a
+  `AMQPHelpers.Reliability.Producer` to provide reliable message exchange.
+
+  ## Example
+
+  This `Consumer` delivers messages to a `t:message_handler/0` which processes
+  these messages. The `Consumer` enforces the usage of `AMQP.Application`, so
+  after defining our application connection, channels and our message handler
+  we can create an instance of this process using `start_link/1` to start
+  consuming messages:
+
+      alias AMQPHelpers.Reliability.Consumer
+
+      my_message_handler = fn payload, meta ->
+        IO.inspect({payload, meta}, label: "Got a message!")
+      end
+
+      {:ok, consumer} = Consumer.start_link(
+        channel_name: :my_channel_name,
+        message_handler: :my_channel_name,
+        queue_name: "my_queue_name"
+      )
+
   """
 
   use GenServer
 
   require Logger
 
-  @typedoc "TODO"
+  @typedoc """
+  The function that handle messages.
+
+  A message handler is a function that will deal with the consumed messaged. It
+  will receive the payload of the message as first argument, and the message
+  metadata as second argument.
+
+  A module, function, arguments triplet can also be used. For example, if
+  `{Foo, :bar, [1, 2]}` is used as message handler, the consumer will call
+  `Foo.bar(message, meta, 1, 2)` to handle messages.
+
+  This function must return `:ok` if the messages was handled successfully, so
+  the consumer will acknowledge the message. Any other return value will
+  non-acknowledge the message.
+  """
   @type message_handler :: function() | {module(), atom(), list()}
 
-  @typedoc "TODO"
+  @typedoc "Option values used by `start_link/1` function."
   @type option ::
           GenServer.option()
           | {:adapter, module()}
@@ -24,7 +64,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
           | {:retry_interval, non_neg_integer()}
           | {:shutdown_gracefully, boolean()}
 
-  @typedoc "TODO"
+  @typedoc "Options used by `start_link/1` function."
   @type options :: [option()]
 
   @consumer_options ~w(adapter channel_name consume_on_init consume_options message_handler prefetch_count prefetch_size queue_name retry_interval shutdown_gracefully)a
@@ -35,11 +75,48 @@ defmodule AMQPHelpers.Reliability.Consumer do
   # Client Interface
   #
 
+  @doc """
+  Starts consuming messages.
+
+  This function is used to start consuming messages when `consume_on_init`
+  option is set to false. Not required by default but useful for testing
+  purposes.
+  """
   @spec consume(GenServer.server()) :: :ok
   def consume(server), do: GenServer.cast(server, :consume)
 
+  @doc """
+  Starts a `Consumer` process linked to the current process.
+
+  ## Options
+
+  The following option can be given to `Consumer` when starting it. Note that
+  `message_handler` and `queue_name` **are required**.
+
+    * `adapter` - Sets the `AMQPHelpers.Adapter`. Defaults to
+      `AMQPHelpers.Adapters.AMQP`.
+    * `channel_name` - The name of the configured channel to use. See
+      `AMQP.Application` for more information. Defaults to `:default`.
+    * `consume_on_init` - If the consumer should start consuming messages on init
+      or not. Defaults to `true`.
+    * `consume_options` - The options given to `c:AMQPHelpers.Adapter.consume/4`.
+    * `message_handler` - The function that will deal with messages. Required.
+    * `prefetch_count` - The maximum number of unacknowledged messages in the
+       channel. See `AMQP.Basic.qos\2` for more info.
+    * `prefetch_size` - The maximum number of unacknowledged bytes in the
+       channel. See `AMQP.Basic.qos\2` for more info.
+    * `queue_name` - The name of the queue to consume. Required.
+    * `retry_interval` - The number of millisecond to wait if an error happens
+      when trying to consume messages or when trying to open a channel.
+    * `shutdown_gracefully` - If enabled, the consumer will cancel the
+      subscription when terminating. Default to `false` but enforced if
+      `consumer_options` has `exclusive` set to `true`.
+
+  `t:GenServer.options/0` are also available. See `GenServer.start_link/2` for
+  more information about these.
+  """
   @spec start_link(keyword) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(opts) do
+  def start_link(opts \\ []) do
     {consumer_opts, genserver_opts} = Keyword.split(opts, @consumer_options)
     GenServer.start_link(__MODULE__, consumer_opts, genserver_opts)
   end
