@@ -3,9 +3,9 @@ name: Build and Test
 on: push
 
 env:
-  ELIXIR_VERSION: 1.11.4
+  ELIXIR_VERSION: 1.12.2
   MIX_ENV: test
-  OTP_VERSION: 23.2.4
+  OTP_VERSION: 24.0.3
 
 jobs:
   build-test:
@@ -16,8 +16,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Setup Elixir v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}
-        uses: erlef/setup-elixir@v1
+      - name: Setup Beam v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}
+        uses: erlef/setup-beam@v1
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
