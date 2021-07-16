@@ -169,7 +169,7 @@ defmodule AMQPHelpers.Reliability.ConsumerTest do
     end
 
     @tag skip_prepare_consumer: true
-    test "call the message handler when the message arrives" do
+    test "calls the message handler when the message arrives" do
       {parent, ref} = {self(), make_ref()}
 
       stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
@@ -196,6 +196,35 @@ defmodule AMQPHelpers.Reliability.ConsumerTest do
       send(consumer, {:basic_deliver, "bar", %{delivery_tag: "qux"}})
 
       assert_receive {^ref, :message_handler}
+    end
+
+    @tag skip_prepare_consumer: true
+    test "calls the module handler when the message arrives" do
+      defmodule MessageHandlerStub do
+        def handle_message(payload, meta, parent, ref) do
+          send(parent, {ref, :handle_message, payload, meta})
+        end
+      end
+
+      {parent, ref} = {self(), make_ref()}
+
+      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+
+      opts = [
+        adapter: AMQPMock,
+        consume_on_init: false,
+        queue_name: "foo",
+        message_handler: {MessageHandlerStub, :handle_message, [parent, ref]}
+      ]
+
+      consumer = start_supervised!({Consumer, opts}, restart: :temporary, id: :test_consumer)
+
+      allow(AMQPMock, self(), consumer)
+
+      send(consumer, {:basic_consume_ok, %{consumer_tag: "foo"}})
+      send(consumer, {:basic_deliver, "bar", %{delivery_tag: "qux"}})
+
+      assert_receive {^ref, :handle_message, "bar", %{delivery_tag: "qux"}}
     end
 
     @tag consumer_opts: [retry_interval: 1]
