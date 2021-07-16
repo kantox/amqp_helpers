@@ -1,6 +1,24 @@
 defmodule AMQPHelpers.Reliability.Producer do
   @moduledoc """
-  TODO
+  A producer for dealing with reliability scenarios.
+
+  A `AMQPHelpers.Reliability.Producer` is process which manages a reliable
+  send operation over *AMQP*, where messages are acknowledge by the broker
+  after sending them. [Publisher Confirms](https://www.rabbitmq.com/confirms.html#publisher-confirms)
+  AMQP extension is used to achieve this.
+
+  ## Example
+
+  This `Producer` enforces the usage of `AMQP.Application`, so after defining
+  our application connection and channel we can start a producer and start
+  publishing message in a reliable way.
+
+      alias AMQPHelpers.Reliability.Producer
+
+      {:ok, producer} = Consumer.start_link(channel_name: :my_channel_name)
+
+      Producer.publish(producer, "exchange", "routing_key", "payload", message_id: "foo")
+
   """
 
   # TODO: add setup_channel_on_publish (default to true)
@@ -9,7 +27,7 @@ defmodule AMQPHelpers.Reliability.Producer do
 
   alias AMQPHelpers.WaitGroup
 
-  @typedoc "TODO"
+  @typedoc "Option values used by `start_link/1` function."
   @type option ::
           GenServer.option()
           | {:adapter, module()}
@@ -17,7 +35,7 @@ defmodule AMQPHelpers.Reliability.Producer do
           | {:channel_name, binary() | atom()}
           | {:retry_interval, non_neg_integer()}
 
-  @typedoc "TODO"
+  @typedoc "Options used by `start_link/1` function."
   @type options :: [option()]
 
   @default_adapter AMQPHelpers.Adapters.AMQP
@@ -30,6 +48,12 @@ defmodule AMQPHelpers.Reliability.Producer do
   #
 
   @doc """
+  Publish a message ensuring that the broker receives it.
+
+  Similar to `c:AMQPHelpers.Adapter.publish/5` but ensures that the broker
+  receives the message sent. Some message delivery options are enabled by
+  default (`mandatory` and `persistent`) and `message_id` option **is required**
+  to track the message state.
   """
   @spec publish(
           GenServer.server(),
@@ -50,17 +74,38 @@ defmodule AMQPHelpers.Reliability.Producer do
       do: GenServer.call(server, {:publish, {exchange, routing_key, payload, opts}}, timeout)
 
   @doc """
-  TODO
+  Starts a `Producer` process linked to the current process.
+
+  ## Options
+
+  The following option can be given to `Producer` when starting it. Note that
+  `queue_name` **is required**.
+
+    * `adapter` - Sets the `AMQPHelpers.Adapter`. Defaults to
+      `AMQPHelpers.Adapters.AMQP`.
+    * `setup_channel_on_init` - Whether to configure the channel for reliable
+      message sending on init or not. Defaults to `false`.
+    * `channel_name` - The name of the configured channel to use. See
+      `AMQP.Application` for more information. Defaults to `:default`.
+    * `retry_interval` - The number of millisecond to wait if an error happens
+      when trying to consume messages or when trying to open a channel.
+
+  `t:GenServer.options/0` are also available. See `GenServer.start_link/2` for
+  more information about these.
   """
   @spec start_link(GenServer.options()) :: GenServer.on_start()
-  def start_link(opts) do
+  def start_link(opts \\ []) do
     {producer_opts, genserver_opts} = Keyword.split(opts, @producer_options)
 
     GenServer.start_link(__MODULE__, producer_opts, genserver_opts)
   end
 
   @doc """
-  TODO
+  Setups the channel for reliable message delivery.
+
+  This function is used to setup reliable message delivery when
+  `setup_channel_on_init` is set to false. Not required by default but useful
+  for testing purposes.
   """
   @spec setup_channel(GenServer.server()) :: :ok
   def setup_channel(producer), do: GenServer.cast(producer, :setup_channel)
