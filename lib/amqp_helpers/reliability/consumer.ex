@@ -211,12 +211,8 @@ defmodule AMQPHelpers.Reliability.Consumer do
 
   @impl true
   def terminate(reason, %{adapter: adapter, chan: chan, consumer_tag: consumer_tag}) do
-    unless is_nil(chan) do
-      unless is_nil(consumer_tag) do
-        adapter.cancel_consume(chan, consumer_tag, [])
-      end
-
-      adapter.close_channel(chan)
+    unless is_nil(consumer_tag) do
+      adapter.cancel_consume(chan, consumer_tag, [])
     end
 
     reason
