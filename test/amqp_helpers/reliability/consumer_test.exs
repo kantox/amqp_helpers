@@ -291,6 +291,23 @@ defmodule AMQPHelpers.Reliability.ConsumerTest do
 
       assert_receive {^ref, :cancel_consume}
     end
+
+    @tag consumer_opts: [consume_options: [exclusive: true]]
+    test "is canceled when exclusive is enabled", %{consumer: consumer} do
+      {parent, ref} = {self(), make_ref()}
+
+      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+
+      Consumer.consume(consumer)
+
+      expect(AMQPMock, :cancel_consume, fn _chan, _consumer_tag, _opts ->
+        send(parent, {ref, :cancel_consume})
+      end)
+
+      stop_supervised!(Consumer)
+
+      assert_receive {^ref, :cancel_consume}
+    end
   end
 
   # TODO: Check logging

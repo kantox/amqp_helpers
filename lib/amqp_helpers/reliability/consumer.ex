@@ -27,7 +27,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
   @typedoc "TODO"
   @type options :: [option()]
 
-  @consumer_options ~w(adapter channel_name consume_on_init message_handler prefetch_count prefetch_size queue_name retry_interval shutdown_gracefully)a
+  @consumer_options ~w(adapter channel_name consume_on_init consume_options message_handler prefetch_count prefetch_size queue_name retry_interval shutdown_gracefully)a
   @default_adapter AMQPHelpers.Adapters.AMQP
   @default_retry_interval 1_000
 
@@ -67,7 +67,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
       retry_interval: Keyword.get(opts, :retry_interval, @default_retry_interval)
     }
 
-    Process.flag(:trap_exit, Keyword.get(opts, :shutdown_gracefully, false))
+    Process.flag(:trap_exit, shutdown_gracefully?(opts))
 
     if Keyword.get(opts, :consume_on_init, true) do
       {:ok, state, {:continue, :try_open_channel}}
@@ -240,5 +240,17 @@ defmodule AMQPHelpers.Reliability.Consumer do
 
   defp handle_message({module, fun, args}, payload, meta) do
     apply(module, fun, [payload | [meta | args]])
+  end
+
+  @spec shutdown_gracefully?(keyword()) :: boolean()
+  defp shutdown_gracefully?(opts) do
+    shutdown_gracefully = Keyword.get(opts, :shutdown_gracefully, false)
+
+    exclusive =
+      opts
+      |> Keyword.get(:consume_options, [])
+      |> Keyword.get(:exclusive, false)
+
+    shutdown_gracefully || exclusive
   end
 end
