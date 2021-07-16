@@ -132,9 +132,40 @@ for this purpose, which are:
 
 ### Reliability
 
+For reliability, [Acknowledgements and Confirms](https://www.rabbitmq.com/confirms.html)
+are used, which have an impact in performance. Reliability is not only achieved
+at client level, broker configuration and monitoring are also important topics
+here. You can read [RabbitMQ's Reliability Guide](https://www.rabbitmq.com/reliability.html)
+for more information.
+
+The `AMQPHelpers.Reliability.Consumer` and `AMQPHelpers.Reliability.Producer`
+provide processes to consume and publish messages in a reliable fashion. The
+`Consumer` uses standard AMQP acknowledges mechanism to notify that messages are
+consumed successfully. The `Producer` uses the _Publisher Confirms_ extension to
+get notified about successfully message deliveries.
+
+A system which uses the provided `Reliability.Consumer` and
+`Reliability.Producer` will guarantee that no message is lost, and at least one
+message is delivered. For high availability you can pair this processes with
+mirrored queues. For consistency, you can use
+[deduplication plugin](https://github.com/noxdafox/rabbitmq-message-deduplication)
+or [quorum queues](https://www.rabbitmq.com/quorum-queues.html) (Which also
+guarantees message order).
+
 ## Testing
 
-**TODO**
+This library provides an _AMQP_ interface at `AMQPHelpers.Adapter` which can
+be used with libraries like [Mox](https://github.com/dashbitco/mox) to mock any
+part of the _AMQP_ interface. Check out the tests of this library to see some
+examples.
+
+Two adapter implementations are provided with this library:
+
+- `AMQPHelpers.Adapters.Stub` - A stub implementation that only logs calls.
+- `AMQPHelpers.Adapters.AMQP` - An implementation that uses `AMQP` library.
+
+All the functionally exposed by the library support in one or another way a
+configurable adapter (defaults to `AMQP` implementation).
 
 ## References
 
