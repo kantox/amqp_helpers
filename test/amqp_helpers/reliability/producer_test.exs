@@ -60,7 +60,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
 
     test "must be fetched again when channel's process die", %{producer: producer} do
       {parent, ref} = {self(), make_ref()}
-      chan = %{pid: spawn(fn -> Process.sleep(:infinity) end)}
+      {:ok, chan} = AMQPHelpers.Adapters.Stub.fetch_application_channel(:default)
 
       stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
 
@@ -77,11 +77,11 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
 
       expect(AMQPMock, :fetch_application_channel, fn _chan_name ->
         send(parent, {ref, :fetch_application_channel})
-        Process.sleep(:infinity)
+
+        AMQPHelpers.Adapters.Stub.fetch_application_channel(:default)
       end)
 
       assert_receive {^ref, :fetch_application_channel}
-      assert Process.alive?(producer)
     end
 
     test "must be configured with publisher confirms", %{producer: producer} do
@@ -120,7 +120,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
 
     test "must be listened for returned messages", %{producer: producer} do
       {parent, ref} = {self(), make_ref()}
-      chan = %{pid: spawn(fn -> Process.sleep(:infinity) end)}
+      {:ok, chan} = AMQPHelpers.Adapters.Stub.fetch_application_channel(:default)
 
       stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
 
@@ -147,14 +147,8 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
   describe "publish/6" do
     test "must send a message", %{producer: producer} do
       {parent, ref} = {self(), make_ref()}
-      chan = %{pid: spawn(fn -> Process.sleep(:infinity) end)}
 
       stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
-
-      expect(AMQPMock, :fetch_application_channel, fn _chan_name ->
-        send(parent, {ref, :fetch_application_channel})
-        {:ok, chan}
-      end)
 
       expect(AMQPMock, :get_next_delivery_tag, fn _chan ->
         send(parent, {ref, :get_next_delivery_tag})
@@ -163,7 +157,6 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
 
       Producer.setup_channel(producer)
 
-      assert_receive {^ref, :fetch_application_channel}
       assert_receive {^ref, :get_next_delivery_tag}
 
       {:ok, acknowledger} =
@@ -172,8 +165,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
           send(producer, {:basic_ack, 9001, false})
         end)
 
-      expect(AMQPMock, :publish, fn inner_chan, exchange, routing_key, payload, opts ->
-        assert inner_chan == chan
+      expect(AMQPMock, :publish, fn _chan, exchange, routing_key, payload, opts ->
         assert exchange == "foo"
         assert routing_key == "bar"
         assert payload == "qux"

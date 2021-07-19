@@ -108,7 +108,12 @@ defmodule AMQPHelpers.Adapters.Stub do
   def register_confirm_handler(chan, handler) do
     log(:register_confirm_handler, [chan, handler])
 
-    Agent.update(chan.pid, fn state -> %{state | confirm_handler: handler} end)
+    try do
+      Agent.update(chan.pid, fn state -> %{state | confirm_handler: handler} end)
+    catch
+      :exit, _ ->
+        :ok
+    end
 
     :ok
   end
