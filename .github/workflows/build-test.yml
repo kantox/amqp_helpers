@@ -46,6 +46,9 @@ jobs:
       - name: Check Source Code Formatting
         run: mix format --check-formatted
 
+      - name: Compile Code
+        run: mix compile --warning-as-errors
+
       - name: Run Tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
