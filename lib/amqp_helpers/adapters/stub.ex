@@ -49,7 +49,7 @@ defmodule AMQPHelpers.Adapters.Stub do
       |> get_in([:channels, name, :connection])
       |> Kernel.||(:default)
 
-    conn = fetch_application_connection(name)
+    conn = fetch_application_connection(connection_name)
 
     {:ok, chan_pid} = Agent.start(fn -> %{confirm_handler: nil, delivery_tag: 1} end)
     chan = struct(AMQP.Channel, %{conn: conn, pid: chan_pid})

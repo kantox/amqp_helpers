@@ -225,8 +225,6 @@ defmodule AMQPHelpers.Reliability.Consumer do
 
   def handle_info({:DOWN, _ref, :process, _pid, _reason}, state), do: {:noreply, state}
 
-  def handle_info({:DOWN, _ref, :process, _pid, _reason}, state), do: {:noreply, state}
-
   def handle_info({:EXIT, _pid, _reason}, state), do: {:noreply, state}
 
   # Retry Opening Channel
