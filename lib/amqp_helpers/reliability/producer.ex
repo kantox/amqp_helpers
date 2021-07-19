@@ -93,7 +93,7 @@ defmodule AMQPHelpers.Reliability.Producer do
   `t:GenServer.options/0` are also available. See `GenServer.start_link/2` for
   more information about these.
   """
-  @spec start_link(GenServer.options()) :: GenServer.on_start()
+  @spec start_link(options()) :: GenServer.on_start()
   def start_link(opts \\ []) do
     {producer_opts, genserver_opts} = Keyword.split(opts, @producer_options)
 

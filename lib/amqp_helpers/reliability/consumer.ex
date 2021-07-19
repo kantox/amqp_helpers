@@ -115,7 +115,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
   `t:GenServer.options/0` are also available. See `GenServer.start_link/2` for
   more information about these.
   """
-  @spec start_link(keyword) :: :ignore | {:error, any} | {:ok, pid}
+  @spec start_link(options()) :: GenServer.on_start()
   def start_link(opts \\ []) do
     {consumer_opts, genserver_opts} = Keyword.split(opts, @consumer_options)
     GenServer.start_link(__MODULE__, consumer_opts, genserver_opts)
