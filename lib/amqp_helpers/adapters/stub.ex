@@ -108,7 +108,13 @@ defmodule AMQPHelpers.Adapters.Stub do
   def open_channel(conn) do
     log(:open_channel, [conn])
 
-    :ok
+    conn_pid = Process.spawn(fn -> Process.sleep(:infinity) end, [])
+    conn = %AMQP.Connection{pid: conn_pid}
+
+    {:ok, chan_pid} = Agent.start(fn -> %{confirm_handler: nil, delivery_tag: 1} end)
+    chan = struct(AMQP.Channel, %{conn: conn, pid: chan_pid})
+
+    {:ok, chan}
   end
 
   @impl true
