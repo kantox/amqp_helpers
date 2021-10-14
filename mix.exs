@@ -7,7 +7,7 @@ defmodule AmqpHelpers.MixProject do
       name: "AMQP Helpers",
       description: "Non opinionated AMQP helpers",
       version: "1.0.0",
-      elixir: "~> 1.11",
+      elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       dialyzer: dialyzer(),
       deps: deps(),
@@ -25,7 +25,7 @@ defmodule AmqpHelpers.MixProject do
 
   defp deps do
     [
-      {:amqp, "~> 2.1"},
+      {:amqp, "~> 3.0"},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.24", only: :dev, runtime: false},
