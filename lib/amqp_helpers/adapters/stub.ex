@@ -105,6 +105,13 @@ defmodule AMQPHelpers.Adapters.Stub do
   end
 
   @impl true
+  def open_channel(conn) do
+    log(:open_channel, [conn])
+
+    :ok
+  end
+
+  @impl true
   def register_confirm_handler(chan, handler) do
     log(:register_confirm_handler, [chan, handler])
 

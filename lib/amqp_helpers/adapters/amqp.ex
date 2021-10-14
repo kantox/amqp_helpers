@@ -37,6 +37,9 @@ defmodule AMQPHelpers.Adapters.AMQP do
   defdelegate nack(channel, delivery_tag, options), to: AMQP.Basic
 
   @impl true
+  defdelegate open_channel(connection), to: AMQP.Channel, as: :open
+
+  @impl true
   defdelegate publish(channel, exchange, routing_key, payload, options), to: AMQP.Basic
 
   @impl true

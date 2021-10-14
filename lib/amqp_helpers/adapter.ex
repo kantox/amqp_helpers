@@ -90,6 +90,14 @@ defmodule AMQPHelpers.Adapter do
               :ok | {:error, term()}
 
   @doc """
+  Opens a new channel in a previously opened connection.
+
+  See `AMQP.Channel.open/2`.
+  """
+  @callback open_channel(connection :: AMQP.Connection.t()) ::
+              {:ok, AMQP.Channel.t()} | {:error, term()}
+
+  @doc """
   Publishes a message to an Exchange.
 
   See `AMQP.Basic.publish/5`.
