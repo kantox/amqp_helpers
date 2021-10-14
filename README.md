@@ -81,13 +81,15 @@ have at most two connection (in/out) and one channel per multiplexing process.
 
 ## User Case Scenarios
 
-Two _AMQP_ use cases are covered in _AMQP Helpers_ right now:
+These are the _AMQP_ use cases are covered in _AMQP Helpers_ right now:
 
 - A performance-intensive scenario in which a high throughput message delivery
   rate is desired. Trade-offs in reliability are acceptable.
 
 - A reliable scenario in which data safety is a must, even if performance is
   compromised.
+
+- Remote procedure calls using [Direct Reply-to](https://www.rabbitmq.com/direct-reply-to.html).
 
 There are some other features, like _High Availability_, _Observability_,
 _Exclusivity_, etc. that can be achieved in both scenarios but are not
