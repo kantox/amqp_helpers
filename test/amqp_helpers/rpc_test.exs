@@ -12,6 +12,8 @@ defmodule AMQPHelpers.RPCTest do
     setup context do
       Mox.stub(AMQPMock, :open_channel, fn _conn -> {:ok, nil} end)
 
+      Mox.stub(AMQPMock, :close_channel, fn _chan -> :ok end)
+
       Mox.stub(AMQPMock, :publish, fn _chan, _exchange, _routing_key, _payload, _opts ->
         send(self(), {:basic_deliver, Map.get(context, :payload, "payload"), []})
 
@@ -63,6 +65,21 @@ defmodule AMQPHelpers.RPCTest do
         end)
 
       assert_receive {:EXIT, ^pid, {:timeout, _ref}}
+    end
+
+    test "closes the channel after finishing" do
+      {parent, ref} = {self(), make_ref()}
+
+      Mox.expect(AMQPMock, :close_channel, fn _chan ->
+        send(parent, {ref, :close_channel})
+
+        :ok
+      end)
+
+      RPC.call(AMQPMock, :conn, "foo", "bar", "qux")
+
+      assert_receive {^ref, :close_channel}
+      refute_receive {:EXIT, _pid, _reason}
     end
   end
 end

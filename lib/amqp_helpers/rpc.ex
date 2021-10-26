@@ -51,18 +51,20 @@ defmodule AMQPHelpers.RPC do
       |> Keyword.take(@publish_opts_keys)
       |> Keyword.put(:reply_to, "amq.rabbitmq.reply-to")
 
-    with {:ok, chan} <- adapter.open_channel(conn),
-         {:ok, consumer_tag} <- adapter.consume(chan, "amq.rabbitmq.reply-to", nil, no_ack: true),
-         {:basic_consume_ok, %{consumer_tag: ^consumer_tag}} <-
-           do_receive(&match?({:basic_consume_ok, _}, &1)),
-         :ok <- adapter.publish(chan, exchange, routing_key, payload, publish_opts),
-         {:basic_deliver, payload, meta} <- do_receive(&match?({:basic_deliver, _, _}, &1)) do
-      {:ok, %{payload: payload, meta: meta}}
-    else
-      :error -> {:error, "unknown error"}
-      error = {:error, _reason} -> error
-      unexpected -> {:error, "got unexpected result: #{inspect(unexpected)}"}
-    end
+    with_channel(adapter, conn, fn chan ->
+      with {:ok, consumer_tag} <-
+             adapter.consume(chan, "amq.rabbitmq.reply-to", nil, no_ack: true),
+           {:basic_consume_ok, %{consumer_tag: ^consumer_tag}} <-
+             do_receive(&match?({:basic_consume_ok, _}, &1)),
+           :ok <- adapter.publish(chan, exchange, routing_key, payload, publish_opts),
+           {:basic_deliver, payload, meta} <- do_receive(&match?({:basic_deliver, _, _}, &1)) do
+        {:ok, %{payload: payload, meta: meta}}
+      else
+        :error -> {:error, "unknown error"}
+        error = {:error, _reason} -> error
+        unexpected -> {:error, "got unexpected result: #{inspect(unexpected)}"}
+      end
+    end)
   end
 
   @spec do_receive(function()) :: term() | no_return()
@@ -74,6 +76,19 @@ defmodule AMQPHelpers.RPC do
         else
           do_receive(predicate)
         end
+    end
+  end
+
+  @spec with_channel(module(), AMQP.Connection.t(), function()) :: term() | {:error, binary()}
+  defp with_channel(adapter, conn, handler) do
+    case adapter.open_channel(conn) do
+      {:ok, chan} ->
+        result = handler.(chan)
+        adapter.close_channel(chan)
+        result
+
+      {:error, reason} ->
+        {:error, "cannot open channel: #{inspect(reason)}"}
     end
   end
 end
