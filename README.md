@@ -15,8 +15,8 @@ install both by adding `amqp` and `amqp_helpers` to your list of dependencies in
 ```elixir
 def deps do
   [
-    {:amqp, "~> 2.1"},
-    {:amqp_helpers, "~> 1.0"}
+    {:amqp, "~> 3.0"},
+    {:amqp_helpers, "~> 1.1"}
   ]
 end
 ```
