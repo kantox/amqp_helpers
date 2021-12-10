@@ -19,6 +19,10 @@ defmodule AMQPHelpers.RPC do
 
   This function sends the given messages and waits for a response using
   [Direct Reply-to](https://www.rabbitmq.com/direct-reply-to.html).
+
+  This function uses a `Task` internally to wait for responses. This means
+  all the caveats and OTP compatibility `Task` issues apply here too. Check
+  `call_nolink/7` for more information.
   """
   @spec call(
           module(),
@@ -34,6 +38,37 @@ defmodule AMQPHelpers.RPC do
     __MODULE__
     |> Task.async(:do_call, [adapter, connection, exchange, routing_key, payload, options])
     |> Task.await(timeout)
+  end
+
+  @doc """
+  Executes a remote procedure call without linking to the calling process.
+
+  Like `call/6` but it does not link the waiting process to the calling process.
+  Check `Task.Supervisor` for more information.
+  """
+  @spec call_nolink(
+          module(),
+          Supervisor.supervisor(),
+          AMQP.Connection.t(),
+          AMQPBasic.exchange(),
+          AMQPBasic.routing_key(),
+          AMQPBasic.payload(),
+          keyword()
+        ) :: {:ok, term()} | {:error, term()} | no_return()
+  def call_nolink(
+        adapter \\ Adapter,
+        supervisor,
+        connection,
+        exchange,
+        routing_key,
+        payload,
+        options \\ []
+      ) do
+    params = [adapter, connection, exchange, routing_key, payload, options]
+
+    supervisor
+    |> Task.Supervisor.async_nolink(__MODULE__, :do_call, params)
+    |> Task.await()
   end
 
   @doc false
