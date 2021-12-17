@@ -64,11 +64,12 @@ defmodule AMQPHelpers.RPC do
         payload,
         options \\ []
       ) do
+    timeout = Keyword.get(options, :timeout, @default_timeout)
     params = [adapter, connection, exchange, routing_key, payload, options]
 
     supervisor
     |> Task.Supervisor.async_nolink(__MODULE__, :do_call, params)
-    |> Task.await()
+    |> Task.await(timeout)
   end
 
   @doc false
@@ -86,7 +87,7 @@ defmodule AMQPHelpers.RPC do
       |> Keyword.take(@publish_opts_keys)
       |> Keyword.put(:reply_to, "amq.rabbitmq.reply-to")
 
-    with_channel(adapter, conn, fn chan ->
+    do_with_channel(adapter, conn, fn chan ->
       with {:ok, consumer_tag} <-
              adapter.consume(chan, "amq.rabbitmq.reply-to", nil, no_ack: true),
            {:basic_consume_ok, %{consumer_tag: ^consumer_tag}} <-
@@ -114,8 +115,8 @@ defmodule AMQPHelpers.RPC do
     end
   end
 
-  @spec with_channel(module(), AMQP.Connection.t(), function()) :: term() | {:error, binary()}
-  defp with_channel(adapter, conn, handler) do
+  @spec do_with_channel(module(), AMQP.Connection.t(), function()) :: term() | {:error, binary()}
+  defp do_with_channel(adapter, conn, handler) do
     case adapter.open_channel(conn) do
       {:ok, chan} ->
         result = handler.(chan)
