@@ -54,6 +54,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
   @type option ::
           GenServer.option()
           | {:adapter, module()}
+          | {:channel, AMQP.Channel.t()}
           | {:channel_name, binary() | atom()}
           | {:consume_on_init, boolean()}
           | {:consume_options, keyword()}
@@ -67,7 +68,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
   @typedoc "Options used by `start_link/1` function."
   @type options :: [option()]
 
-  @consumer_options ~w(adapter channel_name consume_on_init consume_options message_handler prefetch_count prefetch_size queue_name retry_interval shutdown_gracefully)a
+  @consumer_options ~w(adapter channel channel_name consume_on_init consume_options message_handler prefetch_count prefetch_size queue_name retry_interval shutdown_gracefully)a
   @default_adapter AMQPHelpers.Adapters.AMQP
   @default_retry_interval 1_000
 
@@ -95,6 +96,10 @@ defmodule AMQPHelpers.Reliability.Consumer do
 
     * `adapter` - Sets the `AMQPHelpers.Adapter`. Defaults to
       `AMQPHelpers.Adapters.AMQP`.
+    * `channel` - The channel to use to consume messages. **NOTE**: do **not**
+      use this for production environments because this *consumer* does not
+      supervise the given channel. Instead, use `channel_name` which makes use 
+      of `AMQP.Application`.
     * `channel_name` - The name of the configured channel to use. See
       `AMQP.Application` for more information. Defaults to `:default`.
     * `consume_on_init` - If the consumer should start consuming messages on init
@@ -132,7 +137,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
   def init(opts) do
     state = %{
       adapter: Keyword.get(opts, :adapter, @default_adapter),
-      chan: nil,
+      chan: Keyword.get(opts, :channel, nil),
       chan_name: Keyword.get(opts, :channel_name, :default),
       chan_opts: Keyword.take(opts, [:prefetch_size, :prefetch_count]),
       chan_retry_ref: nil,
@@ -159,6 +164,10 @@ defmodule AMQPHelpers.Reliability.Consumer do
   end
 
   @impl true
+  def handle_continue(:try_open_channel, state = %{chan: chan, consumer_tag: nil})
+      when not is_nil(chan),
+      do: {:noreply, state, {:continue, :try_consume}}
+
   def handle_continue(:try_open_channel, state = %{chan: chan}) when not is_nil(chan),
     do: {:noreply, state}
 

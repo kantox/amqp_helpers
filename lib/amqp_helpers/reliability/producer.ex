@@ -32,6 +32,7 @@ defmodule AMQPHelpers.Reliability.Producer do
           GenServer.option()
           | {:adapter, module()}
           | {:setup_channel_on_init, boolean}
+          | {:channel, AMQP.Channel.t()}
           | {:channel_name, binary() | atom()}
           | {:retry_interval, non_neg_integer()}
 
@@ -85,6 +86,10 @@ defmodule AMQPHelpers.Reliability.Producer do
       `AMQPHelpers.Adapters.AMQP`.
     * `setup_channel_on_init` - Whether to configure the channel for reliable
       message sending on init or not. Defaults to `false`.
+    * `channel` - The channel to use to consume messages. **NOTE**: do **not**
+      use this for production environments because this *producer* does not
+      supervise the given channel. Instead, use `channel_name` which makes use 
+      of `AMQP.Application`.
     * `channel_name` - The name of the configured channel to use. See
       `AMQP.Application` for more information. Defaults to `:default`.
     * `retry_interval` - The number of millisecond to wait if an error happens
@@ -118,7 +123,7 @@ defmodule AMQPHelpers.Reliability.Producer do
   def init(opts) do
     state = %{
       adapter: Keyword.get(opts, :adapter, @default_adapter),
-      chan: nil,
+      chan: Keyword.get(opts, :channel, nil),
       chan_monitor: nil,
       chan_name: Keyword.get(opts, :channel_name, :default),
       delivery_tag: 1,
