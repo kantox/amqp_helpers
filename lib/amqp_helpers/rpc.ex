@@ -12,7 +12,22 @@ defmodule AMQPHelpers.RPC do
   alias AMQPHelpers.Adapters.AMQP, as: Adapter
 
   @default_timeout :timer.seconds(5)
-  @publish_opts_keys ~w(mandatory immediate content_type content_encoding headers persistent correlation_id priority expiration message_id timestamp type user_id app_id)a
+  @publish_opts_keys [
+    :app_id,
+    :content_encoding,
+    :content_type,
+    :correlation_id,
+    :expiration,
+    :headers,
+    :immediate,
+    :mandatory,
+    :message_id,
+    :persistent,
+    :priority,
+    :timestamp,
+    :type,
+    :user_id
+  ]
 
   @doc """
   Executes a remote procedure call.
