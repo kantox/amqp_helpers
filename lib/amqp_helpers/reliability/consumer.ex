@@ -64,11 +64,12 @@ defmodule AMQPHelpers.Reliability.Consumer do
           | {:queue_name, binary()}
           | {:retry_interval, non_neg_integer()}
           | {:shutdown_gracefully, boolean()}
+          | {:task_supervisor, Supervisor.supervisor()}
 
   @typedoc "Options used by `start_link/1` function."
   @type options :: [option()]
 
-  @consumer_options ~w(adapter channel channel_name consume_on_init consume_options message_handler prefetch_count prefetch_size queue_name retry_interval shutdown_gracefully)a
+  @consumer_options ~w(adapter channel channel_name consume_on_init consume_options message_handler prefetch_count prefetch_size queue_name retry_interval shutdown_gracefully task_supervisor)a
   @default_adapter AMQPHelpers.Adapters.AMQP
   @default_retry_interval 1_000
 
@@ -97,7 +98,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
     * `adapter` - Sets the `AMQPHelpers.Adapter`. Defaults to
       `AMQPHelpers.Adapters.AMQP`.
     * `channel` - The channel to use to consume messages. **NOTE**: do **not**
-      use this for production environments because this *consumer* does not
+      use this for production environments because this *Consumer* does not
       supervise the given channel. Instead, use `channel_name` which makes use 
       of `AMQP.Application`.
     * `channel_name` - The name of the configured channel to use. See
@@ -116,6 +117,9 @@ defmodule AMQPHelpers.Reliability.Consumer do
     * `shutdown_gracefully` - If enabled, the consumer will cancel the
       subscription when terminating. Default to `false` but enforced if
       `consumer_options` has `exclusive` set to `true`.
+    * `task_supervisor` - The `Task.Supervisor` which runs message handling
+      tasks. If not provided, the `Consumer` will handle messages
+      synchronously.
 
   `t:GenServer.options/0` are also available. See `GenServer.start_link/2` for
   more information about these.
@@ -146,7 +150,8 @@ defmodule AMQPHelpers.Reliability.Consumer do
       consumer_tag: nil,
       message_handler: Keyword.fetch!(opts, :message_handler),
       queue_name: Keyword.fetch!(opts, :queue_name),
-      retry_interval: Keyword.get(opts, :retry_interval, @default_retry_interval)
+      retry_interval: Keyword.get(opts, :retry_interval, @default_retry_interval),
+      task_supervisor: Keyword.get(opts, :task_supervisor)
     }
 
     Process.flag(:trap_exit, shutdown_gracefully?(opts))
@@ -164,6 +169,20 @@ defmodule AMQPHelpers.Reliability.Consumer do
   end
 
   @impl true
+  def handle_continue({:process_message, payload, meta}, state = %{task_supervisor: nil}) do
+    process_message(state.adapter, state.chan, state.message_handler, payload, meta)
+
+    {:noreply, state}
+  end
+
+  def handle_continue({:process_message, payload, meta}, state = %{task_supervisor: supervisor}) do
+    Task.Supervisor.start_child(supervisor, fn ->
+      process_message(state.adapter, state.chan, state.message_handler, payload, meta)
+    end)
+
+    {:noreply, state}
+  end
+
   def handle_continue(:try_open_channel, state = %{chan: chan, consumer_tag: nil})
       when not is_nil(chan),
       do: {:noreply, state, {:continue, :try_consume}}
@@ -255,24 +274,10 @@ defmodule AMQPHelpers.Reliability.Consumer do
   # Consuming
 
   @impl true
-  def handle_info({:basic_deliver, payload, meta = %{delivery_tag: delivery_tag}}, state) do
-    %{adapter: adapter, chan: chan, message_handler: handler} = state
-
+  def handle_info({:basic_deliver, payload, meta}, state) do
     Logger.debug("New message received", payload: payload, meta: meta)
 
-    case handle_message(handler, payload, meta) do
-      :ok ->
-        with {:error, reason} <- adapter.ack(chan, delivery_tag, []) do
-          Logger.error("Cannot acknowledge #{delivery_tag} message: #{inspect(reason)}")
-        end
-
-      _error ->
-        with {:error, reason} <- adapter.nack(chan, delivery_tag, []) do
-          Logger.error("Cannot non-acknowledge #{delivery_tag} message: #{inspect(reason)}")
-        end
-    end
-
-    {:noreply, state}
+    {:noreply, state, {:continue, {:process_message, payload, meta}}}
   end
 
   def handle_info({:basic_consume_ok, _meta}, state = %{queue_name: queue}) do
@@ -324,6 +329,24 @@ defmodule AMQPHelpers.Reliability.Consumer do
 
   defp handle_message({module, fun, args}, payload, meta) do
     apply(module, fun, [payload | [meta | args]])
+  end
+
+  @spec process_message(module, AMQP.Channel.t(), message_handler(), binary(), map()) ::
+          :ok | {:error, term()}
+  defp process_message(adapter, chan, message_handler, payload, meta) do
+    delivery_tag = meta.delivery_tag
+
+    case handle_message(message_handler, payload, meta) do
+      :ok ->
+        with {:error, reason} <- adapter.ack(chan, delivery_tag, []) do
+          Logger.error("Cannot acknowledge #{delivery_tag} message: #{inspect(reason)}")
+        end
+
+      _error ->
+        with {:error, reason} <- adapter.nack(chan, delivery_tag, []) do
+          Logger.error("Cannot non-acknowledge #{delivery_tag} message: #{inspect(reason)}")
+        end
+    end
   end
 
   @spec shutdown_gracefully?(keyword()) :: boolean()
