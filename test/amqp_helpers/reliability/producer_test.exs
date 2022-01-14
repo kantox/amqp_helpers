@@ -3,7 +3,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
 
   import Mox
 
-  alias AMQPHelpers.Reliability.Producer
+  alias AMQPHelpers.{Adapters.Stub, Reliability.Producer}
 
   setup :set_mox_from_context
   setup :verify_on_exit!
@@ -60,9 +60,9 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
 
     test "must be fetched again when channel's process die", %{producer: producer} do
       {parent, ref} = {self(), make_ref()}
-      {:ok, chan} = AMQPHelpers.Adapters.Stub.fetch_application_channel(:default)
+      {:ok, chan} = Stub.fetch_application_channel(:default)
 
-      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+      stub_with(AMQPMock, Stub)
 
       expect(AMQPMock, :fetch_application_channel, fn _chan_name ->
         send(parent, {ref, :fetch_application_channel})
@@ -78,7 +78,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
       expect(AMQPMock, :fetch_application_channel, fn _chan_name ->
         send(parent, {ref, :fetch_application_channel})
 
-        AMQPHelpers.Adapters.Stub.fetch_application_channel(:default)
+        Stub.fetch_application_channel(:default)
       end)
 
       assert_receive {^ref, :fetch_application_channel}
@@ -88,7 +88,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
       {parent, ref} = {self(), make_ref()}
       chan = %{pid: spawn(fn -> Process.sleep(:infinity) end)}
 
-      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+      stub_with(AMQPMock, Stub)
 
       expect(AMQPMock, :fetch_application_channel, fn _chan_name ->
         {:ok, chan}
@@ -120,9 +120,9 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
 
     test "must be listened for returned messages", %{producer: producer} do
       {parent, ref} = {self(), make_ref()}
-      {:ok, chan} = AMQPHelpers.Adapters.Stub.fetch_application_channel(:default)
+      {:ok, chan} = Stub.fetch_application_channel(:default)
 
-      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+      stub_with(AMQPMock, Stub)
 
       expect(AMQPMock, :fetch_application_channel, fn _chan_name ->
         {:ok, chan}
@@ -148,7 +148,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
     test "must send a message", %{producer: producer} do
       {parent, ref} = {self(), make_ref()}
 
-      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+      stub_with(AMQPMock, Stub)
 
       expect(AMQPMock, :get_next_delivery_tag, fn _chan ->
         send(parent, {ref, :get_next_delivery_tag})
@@ -186,7 +186,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
     test "enforce reliable delivery options", %{producer: producer} do
       ref = make_ref()
 
-      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+      stub_with(AMQPMock, Stub)
 
       Producer.setup_channel(producer)
 
@@ -223,7 +223,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
     test "returns an error when negative acknowledge is received", %{producer: producer} do
       {parent, ref} = {self(), make_ref()}
 
-      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+      stub_with(AMQPMock, Stub)
 
       expect(AMQPMock, :get_next_delivery_tag, fn _chan ->
         send(parent, {ref, :get_next_delivery_tag})
@@ -255,7 +255,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
     test "returns an error when the message is returned", %{producer: producer} do
       {parent, ref} = {self(), make_ref()}
 
-      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+      stub_with(AMQPMock, Stub)
 
       expect(AMQPMock, :get_next_delivery_tag, fn _chan ->
         send(parent, {ref, :get_next_delivery_tag})
@@ -285,7 +285,7 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
     end
 
     test "returns the error given from the adapter", %{producer: producer} do
-      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+      stub_with(AMQPMock, Stub)
 
       Producer.setup_channel(producer)
 
