@@ -314,12 +314,10 @@ defmodule AMQPHelpers.Reliability.Consumer do
   @spec do_consume(module(), AMQP.Channel.t(), String.t(), pid() | nil, keyword()) ::
           {:ok, String.t()} | {:error, term()}
   defp do_consume(adapter, channel, queue, consumer_pid \\ nil, options) do
-    try do
-      adapter.consume(channel, queue, consumer_pid, options)
-    catch
-      _, _ ->
-        {:error, :unknown}
-    end
+    adapter.consume(channel, queue, consumer_pid, options)
+  catch
+    _, _ ->
+      {:error, :unknown}
   end
 
   @spec handle_message(message_handler(), binary(), map()) :: :ok | :error | {:error, term()}
