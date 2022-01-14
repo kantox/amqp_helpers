@@ -69,7 +69,20 @@ defmodule AMQPHelpers.Reliability.Consumer do
   @typedoc "Options used by `start_link/1` function."
   @type options :: [option()]
 
-  @consumer_options ~w(adapter channel channel_name consume_on_init consume_options message_handler prefetch_count prefetch_size queue_name retry_interval shutdown_gracefully task_supervisor)a
+  @consumer_options [
+    :adapter,
+    :channel,
+    :channel_name,
+    :consume_on_init,
+    :consume_options,
+    :message_handler,
+    :prefetch_count,
+    :prefetch_size,
+    :queue_name,
+    :retry_interval,
+    :shutdown_gracefully,
+    :task_supervisor
+  ]
   @default_adapter AMQPHelpers.Adapters.AMQP
   @default_retry_interval 1_000
 
