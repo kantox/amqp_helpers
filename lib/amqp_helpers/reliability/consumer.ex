@@ -331,6 +331,12 @@ defmodule AMQPHelpers.Reliability.Consumer do
   defp do_consume(adapter, channel, queue, consumer_pid \\ nil, options) do
     adapter.consume(channel, queue, consumer_pid, options)
   catch
+    :exit, {{:shutdown, {_kind, _code, reason}}, _genserver_info} when is_binary(reason) ->
+      {:error, reason}
+
+    :exit, {reason, _genserver_info} ->
+      {:error, reason}
+
     _, _ ->
       {:error, :unknown}
   end
