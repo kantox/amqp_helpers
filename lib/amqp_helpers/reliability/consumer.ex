@@ -255,6 +255,8 @@ defmodule AMQPHelpers.Reliability.Consumer do
     end
   end
 
+  def handle_continue(:try_consume, state), do: {:noreply, state}
+
   # Channel closed
 
   @impl true
