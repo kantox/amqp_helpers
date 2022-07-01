@@ -62,6 +62,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
           | {:prefetch_count, non_neg_integer()}
           | {:prefetch_size, non_neg_integer()}
           | {:queue_name, binary()}
+          | {:requeue, boolean()}
           | {:retry_interval, non_neg_integer()}
           | {:shutdown_gracefully, boolean()}
           | {:task_supervisor, Supervisor.supervisor()}
@@ -125,6 +126,8 @@ defmodule AMQPHelpers.Reliability.Consumer do
     * `prefetch_size` - The maximum number of unacknowledged bytes in the
        channel. See `AMQP.Basic.qos\2` for more info.
     * `queue_name` - The name of the queue to consume. Required.
+    * `requeue` - Whether to requeue messages or not after a consume error.
+      Defaults to `true`.
     * `retry_interval` - The number of millisecond to wait if an error happens
       when trying to consume messages or when trying to open a channel.
     * `shutdown_gracefully` - If enabled, the consumer will cancel the
@@ -163,6 +166,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
       consumer_tag: nil,
       message_handler: Keyword.fetch!(opts, :message_handler),
       queue_name: Keyword.fetch!(opts, :queue_name),
+      requeue: Keyword.get(opts, :requeue, true),
       retry_interval: Keyword.get(opts, :retry_interval, @default_retry_interval),
       task_supervisor: Keyword.get(opts, :task_supervisor)
     }
@@ -183,14 +187,18 @@ defmodule AMQPHelpers.Reliability.Consumer do
 
   @impl true
   def handle_continue({:process_message, payload, meta}, state = %{task_supervisor: nil}) do
-    process_message(state.adapter, state.chan, state.message_handler, payload, meta)
+    process_message(state.adapter, state.chan, state.message_handler, payload, meta,
+      requeue: state.requeue
+    )
 
     {:noreply, state}
   end
 
   def handle_continue({:process_message, payload, meta}, state = %{task_supervisor: supervisor}) do
     Task.Supervisor.start_child(supervisor, fn ->
-      process_message(state.adapter, state.chan, state.message_handler, payload, meta)
+      process_message(state.adapter, state.chan, state.message_handler, payload, meta,
+        requeue: state.requeue
+      )
     end)
 
     {:noreply, state}
@@ -350,19 +358,20 @@ defmodule AMQPHelpers.Reliability.Consumer do
     apply(module, fun, [payload | [meta | args]])
   end
 
-  @spec process_message(module, AMQP.Channel.t(), message_handler(), binary(), map()) ::
+  @spec process_message(module, AMQP.Channel.t(), message_handler(), binary(), map(), keyword()) ::
           :ok | {:error, term()}
-  defp process_message(adapter, chan, message_handler, payload, meta) do
+  defp process_message(adapter, chan, message_handler, payload, meta, opts) do
     delivery_tag = meta.delivery_tag
 
     case handle_message(message_handler, payload, meta) do
       :ok ->
-        with {:error, reason} <- adapter.ack(chan, delivery_tag, []) do
+        with {:error, reason} <- adapter.ack(chan, delivery_tag, Keyword.take(opts, [:multiple])) do
           Logger.error("Cannot acknowledge #{delivery_tag} message: #{inspect(reason)}")
         end
 
       _error ->
-        with {:error, reason} <- adapter.nack(chan, delivery_tag, []) do
+        with {:error, reason} <-
+               adapter.nack(chan, delivery_tag, Keyword.take(opts, [:multiple, :requeue])) do
           Logger.error("Cannot non-acknowledge #{delivery_tag} message: #{inspect(reason)}")
         end
     end
