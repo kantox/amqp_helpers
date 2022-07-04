@@ -80,6 +80,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
     :prefetch_count,
     :prefetch_size,
     :queue_name,
+    :requeue,
     :retry_interval,
     :shutdown_gracefully,
     :task_supervisor
