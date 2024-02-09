@@ -3,9 +3,9 @@ name: Build and Test
 on: push
 
 env:
-  ELIXIR_VERSION: 1.12.2
+  ELIXIR_VERSION: 1.12
   MIX_ENV: test
-  OTP_VERSION: 24.0.3
+  OTP_VERSION: 24
 
 jobs:
   build-test:
