@@ -15,7 +15,7 @@ defmodule AMQPHelpers.Reliability.Producer do
 
       alias AMQPHelpers.Reliability.Producer
 
-      {:ok, producer} = Consumer.start_link(channel_name: :my_channel_name)
+      {:ok, producer} = Producer.start_link(channel_name: :my_channel_name)
 
       Producer.publish(producer, "exchange", "routing_key", "payload", message_id: "foo")
 
