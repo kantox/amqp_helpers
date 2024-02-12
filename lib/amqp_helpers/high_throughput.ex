@@ -52,7 +52,7 @@ defmodule AMQPHelpers.HighThroughput do
         options
 
       {:ok, _value} ->
-        Logger.warn("Option #{key} is being overridden to a safe high-throughput use case")
+        Logger.warning("Option #{key} is being overridden to a safe high-throughput use case")
         Keyword.put(options, key, value)
 
       :error ->

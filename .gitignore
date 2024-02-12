@@ -27,3 +27,5 @@ amqp_helpers-*.tar
 
 # Log files
 /log
+
+/.elixir-tools/

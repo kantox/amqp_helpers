@@ -226,7 +226,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
     case adapter.fetch_application_channel(chan_name) do
       {:ok, chan} ->
         with {:error, reason} <- adapter.set_channel_options(chan, chan_opts) do
-          Logger.warn("Cannot set channel options: #{inspect(reason)}")
+          Logger.warning("Cannot set channel options: #{inspect(reason)}")
         end
 
         Process.monitor(chan.pid)
@@ -234,7 +234,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
         {:noreply, %{state | chan: chan, chan_retry_ref: nil}, {:continue, :try_consume}}
 
       {:error, reason} ->
-        Logger.warn("Cannot open channel: #{inspect(reason)}")
+        Logger.warning("Cannot open channel: #{inspect(reason)}")
 
         ref = Process.send_after(self(), :chan_retry_timeout, retry_interval)
 
@@ -256,7 +256,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
         {:noreply, %{state | consumer_tag: consumer_tag}}
 
       {:error, reason} ->
-        Logger.warn("Cannot start consuming: #{inspect(reason)}")
+        Logger.warning("Cannot start consuming: #{inspect(reason)}")
 
         ref = Process.send_after(self(), :consume_retry_timeout, retry_interval)
 
@@ -311,13 +311,13 @@ defmodule AMQPHelpers.Reliability.Consumer do
   end
 
   def handle_info({:basic_cancel, _meta}, state) do
-    Logger.warn("Consumer has been unexpectedly cancelled")
+    Logger.warning("Consumer has been unexpectedly cancelled")
 
     {:noreply, %{state | consumer_tag: nil}, {:continue, :try_consume}}
   end
 
   def handle_info({:basic_cancel_ok, _meta}, state) do
-    Logger.warn("Consumer cancelled")
+    Logger.warning("Consumer cancelled")
 
     {:noreply, %{state | consumer_tag: nil}, {:continue, :try_consume}}
   end

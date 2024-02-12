@@ -1,12 +1,15 @@
 defmodule AmqpHelpers.MixProject do
   use Mix.Project
 
+  @app :amqp_helpers
+  @version "1.5.0"
+
   def project do
     [
-      app: :amqp_helpers,
+      app: @app,
       name: "AMQP Helpers",
       description: "Non opinionated AMQP helpers",
-      version: "1.4.1",
+      version: @version,
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       dialyzer: dialyzer(),
@@ -48,15 +51,32 @@ defmodule AmqpHelpers.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md"]
+      extras: ["README.md"],
+      canonical: "http://hexdocs.pm/#{@app}",
+      source_ref: "v#{@version}",
+      source_url: "https://github.com/kantox/#{@app}",
+      groups_for_modules: [
+        Adapters: [
+          AMQPHelpers.Adapter,
+          AMQPHelpers.Adapters.AMQP,
+          AMQPHelpers.Adapters.Stub
+        ],
+        Reliability: [
+          AMQPHelpers.Reliability.Consumer,
+          AMQPHelpers.Reliability.Producer
+        ]
+      ]
     ]
   end
 
   defp package do
     [
       files: ["lib", "mix.exs", "README.md"],
-      licenses: ["BSD-3-Clause"],
-      links: %{"Github" => "https://github.com/kantox/amqp_helpers"}
+      licenses: ["Kantox LTD"],
+      links: %{
+        "GitHub" => "https://github.com/kantox/#{@app}",
+        "Docs" => "https://hexdocs.pm/#{@app}"
+      }
     ]
   end
 
@@ -72,7 +92,7 @@ defmodule AmqpHelpers.MixProject do
     {:no_warn, plt_file} = dialyzer()[:plt_file]
 
     try do
-      :dialyzer_plt.from_file(plt_file)
+      with {:error, reason} <- :dialyzer.plt_info(plt_file), do: throw(reason)
     rescue
       _error -> plt_file |> Path.dirname() |> File.rm_rf()
     catch
