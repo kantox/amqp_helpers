@@ -10,7 +10,7 @@ defmodule AmqpHelpers.MixProject do
       name: "AMQP Helpers",
       description: "Non opinionated AMQP helpers",
       version: @version,
-      elixir: "~> 1.12",
+      elixir: "~> 1.16",
       start_permanent: Mix.env() == :prod,
       dialyzer: dialyzer(),
       deps: deps(),
