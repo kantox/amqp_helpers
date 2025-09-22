@@ -88,7 +88,7 @@ defmodule AMQPHelpers.Reliability.Producer do
       message sending on init or not. Defaults to `false`.
     * `channel` - The channel to use to consume messages. **NOTE**: do **not**
       use this for production environments because this *producer* does not
-      supervise the given channel. Instead, use `channel_name` which makes use 
+      supervise the given channel. Instead, use `channel_name` which makes use
       of `AMQP.Application`.
     * `channel_name` - The name of the configured channel to use. See
       `AMQP.Application` for more information. Defaults to `:default`.
