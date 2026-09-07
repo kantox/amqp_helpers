@@ -72,7 +72,7 @@ defmodule AmqpHelpers.MixProject do
   defp package do
     [
       files: ["lib", "mix.exs", "README.md"],
-      licenses: ["Kantox LTD"],
+      licenses: ["MIT"],
       links: %{
         "GitHub" => "https://github.com/kantox/#{@app}",
         "Docs" => "https://hexdocs.pm/#{@app}"
