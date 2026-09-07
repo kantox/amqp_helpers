@@ -118,6 +118,16 @@ defmodule AMQPHelpers.Reliability.ProducerTest do
       assert Process.alive?(producer)
     end
 
+    @tag producer_opts: [channel: %AMQP.Channel{pid: self()}]
+    test "is not fetched when a channel is already given", %{producer: producer} do
+      monitor = Process.monitor(producer)
+
+      Producer.setup_channel(producer)
+
+      refute_receive {:DOWN, ^monitor, :process, ^producer, _reason}, 50
+      assert Process.alive?(producer)
+    end
+
     test "must be listened for returned messages", %{producer: producer} do
       {parent, ref} = {self(), make_ref()}
       {:ok, chan} = Stub.fetch_application_channel(:default)

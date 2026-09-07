@@ -42,7 +42,7 @@ defmodule AMQPHelpers.Reliability.Producer do
   @default_adapter AMQPHelpers.Adapters.AMQP
   @default_publish_timeout 5_000
   @default_retry_interval 1_000
-  @producer_options ~w(adapter setup_channel_on_init channel_name retry_interval)a
+  @producer_options ~w(adapter setup_channel_on_init channel channel_name retry_interval)a
 
   #
   # Client Interface
@@ -85,7 +85,7 @@ defmodule AMQPHelpers.Reliability.Producer do
     * `adapter` - Sets the `AMQPHelpers.Adapter`. Defaults to
       `AMQPHelpers.Adapters.AMQP`.
     * `setup_channel_on_init` - Whether to configure the channel for reliable
-      message sending on init or not. Defaults to `false`.
+      message sending on init or not. Defaults to `true`.
     * `channel` - The channel to use to consume messages. **NOTE**: do **not**
       use this for production environments because this *producer* does not
       supervise the given channel. Instead, use `channel_name` which makes use
@@ -175,6 +175,9 @@ defmodule AMQPHelpers.Reliability.Producer do
   end
 
   @impl true
+  def handle_continue(:setup_channel, state = %{chan: chan}) when not is_nil(chan),
+    do: {:noreply, state}
+
   def handle_continue(:setup_channel, state = %{chan: nil}) do
     %{adapter: adapter, chan_name: chan_name, retry_interval: retry_interval} = state
 
