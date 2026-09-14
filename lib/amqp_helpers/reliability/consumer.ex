@@ -58,6 +58,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
           | {:channel_name, binary() | atom()}
           | {:consume_on_init, boolean()}
           | {:consume_options, keyword()}
+          | {:graceful_drain_on_shutdown, boolean()}
           | {:message_handler, message_handler()}
           | {:prefetch_count, non_neg_integer()}
           | {:prefetch_size, non_neg_integer()}
@@ -65,6 +66,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
           | {:requeue, boolean()}
           | {:retry_interval, non_neg_integer()}
           | {:shutdown_gracefully, boolean()}
+          | {:shutdown_timeout, non_neg_integer()}
           | {:task_supervisor, Supervisor.supervisor()}
 
   @typedoc "Options used by `start_link/1` function."
@@ -76,6 +78,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
     :channel_name,
     :consume_on_init,
     :consume_options,
+    :graceful_drain_on_shutdown,
     :message_handler,
     :prefetch_count,
     :prefetch_size,
@@ -83,6 +86,7 @@ defmodule AMQPHelpers.Reliability.Consumer do
     :requeue,
     :retry_interval,
     :shutdown_gracefully,
+    :shutdown_timeout,
     :task_supervisor
   ]
   @default_adapter AMQPHelpers.Adapters.AMQP
@@ -120,6 +124,11 @@ defmodule AMQPHelpers.Reliability.Consumer do
       `AMQP.Application` for more information. Defaults to `:default`.
     * `consume_on_init` - If the consumer should start consuming messages on init
       or not. Defaults to `true`.
+    * `graceful_drain_on_shutdown` - If enabled, the consumer will cancel the
+      subscription and wait for in-flight handlers to complete when receiving
+      a SIGTERM signal. If disabled, the shutdown signal is ignored and the
+      consumer keeps processing messages until forcibly terminated by its
+      supervisor. Defaults to `false`.
     * `consume_options` - The options given to `c:AMQPHelpers.Adapter.consume/4`.
     * `message_handler` - The function that will deal with messages. Required.
     * `prefetch_count` - The maximum number of unacknowledged messages in the
@@ -134,6 +143,8 @@ defmodule AMQPHelpers.Reliability.Consumer do
     * `shutdown_gracefully` - If enabled, the consumer will cancel the
       subscription when terminating. Default to `false` but enforced if
       `consumer_options` has `exclusive` set to `true`.
+    * `shutdown_timeout` - Time in milliseconds to wait for in-flight messages
+      to complete before forcing shutdown. Defaults to 60000 (60 seconds).
     * `task_supervisor` - The `Task.Supervisor` which runs message handling
       tasks. If not provided, the `Consumer` will handle messages
       synchronously.
@@ -165,11 +176,16 @@ defmodule AMQPHelpers.Reliability.Consumer do
       consume_opts: Keyword.get(opts, :consume_options, []),
       consume_retry_ref: nil,
       consumer_tag: nil,
+      graceful_drain_on_shutdown: Keyword.get(opts, :graceful_drain_on_shutdown, false),
       message_handler: Keyword.fetch!(opts, :message_handler),
       queue_name: Keyword.fetch!(opts, :queue_name),
       requeue: Keyword.get(opts, :requeue, true),
       retry_interval: Keyword.get(opts, :retry_interval, @default_retry_interval),
-      task_supervisor: Keyword.get(opts, :task_supervisor)
+      task_supervisor: Keyword.get(opts, :task_supervisor),
+      shutdown_timeout: Keyword.get(opts, :shutdown_timeout, 60_000),
+      shutting_down: false,
+      shutdown_timer: nil,
+      in_flight: MapSet.new()
     }
 
     Process.flag(:trap_exit, shutdown_gracefully?(opts))
@@ -196,13 +212,16 @@ defmodule AMQPHelpers.Reliability.Consumer do
   end
 
   def handle_continue({:process_message, payload, meta}, state = %{task_supervisor: supervisor}) do
-    Task.Supervisor.start_child(supervisor, fn ->
-      process_message(state.adapter, state.chan, state.message_handler, payload, meta,
-        requeue: state.requeue
-      )
-    end)
+    {:ok, pid} =
+      Task.Supervisor.start_child(supervisor, fn ->
+        process_message(state.adapter, state.chan, state.message_handler, payload, meta,
+          requeue: state.requeue
+        )
+      end)
 
-    {:noreply, state}
+    Process.monitor(pid)
+
+    {:noreply, %{state | in_flight: MapSet.put(state.in_flight, pid)}}
   end
 
   def handle_continue(:try_open_channel, state = %{chan: chan, consumer_tag: nil})
@@ -275,7 +294,33 @@ defmodule AMQPHelpers.Reliability.Consumer do
     {:noreply, state, {:continue, :try_open_channel}}
   end
 
-  def handle_info({:DOWN, _ref, :process, _pid, _reason}, state), do: {:noreply, state}
+  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
+    if MapSet.member?(state.in_flight, pid) do
+      maybe_stop_after_drain(%{state | in_flight: MapSet.delete(state.in_flight, pid)})
+    else
+      {:noreply, state}
+    end
+  end
+
+  def handle_info(
+        {:EXIT, _pid, :shutdown},
+        state = %{
+          adapter: adapter,
+          chan: chan,
+          consumer_tag: consumer_tag,
+          graceful_drain_on_shutdown: graceful_drain
+        }
+      ) do
+    if graceful_drain do
+      if consumer_tag && chan do
+        adapter.cancel_consume(chan, consumer_tag, [])
+      end
+
+      maybe_stop_after_drain(%{state | consumer_tag: nil, shutting_down: true})
+    else
+      {:noreply, state}
+    end
+  end
 
   def handle_info({:EXIT, _pid, _reason}, state), do: {:noreply, state}
 
@@ -294,6 +339,12 @@ defmodule AMQPHelpers.Reliability.Consumer do
   def handle_info(:consume_retry_timeout, state = %{consume_retry_ref: ref})
       when is_reference(ref),
       do: {:noreply, %{state | consume_retry_ref: nil}, {:continue, :try_consume}}
+
+  # Shutdown timeout
+
+  def handle_info(:shutdown_timeout, state) do
+    {:stop, :shutdown, state}
+  end
 
   # Consuming
 
@@ -323,7 +374,14 @@ defmodule AMQPHelpers.Reliability.Consumer do
   end
 
   @impl true
-  def terminate(reason, %{adapter: adapter, chan: chan, consumer_tag: consumer_tag}) do
+  def terminate(
+        reason,
+        state = %{adapter: adapter, chan: chan, consumer_tag: consumer_tag, shutdown_timer: timer}
+      ) do
+    if timer do
+      Process.cancel_timer(timer)
+    end
+
     unless is_nil(consumer_tag) do
       adapter.cancel_consume(chan, consumer_tag, [])
     end
@@ -334,6 +392,23 @@ defmodule AMQPHelpers.Reliability.Consumer do
   #
   # Helpers
   #
+
+  @spec maybe_stop_after_drain(map()) :: {:noreply, map()} | {:stop, :shutdown, map()}
+  defp maybe_stop_after_drain(state = %{shutting_down: true}) do
+    cond do
+      MapSet.size(state.in_flight) == 0 ->
+        {:stop, :shutdown, state}
+
+      is_nil(state.shutdown_timer) ->
+        ref = Process.send_after(self(), :shutdown_timeout, state.shutdown_timeout)
+        {:noreply, %{state | shutdown_timer: ref}}
+
+      true ->
+        {:noreply, state}
+    end
+  end
+
+  defp maybe_stop_after_drain(state), do: {:noreply, state}
 
   @spec do_consume(module(), AMQP.Channel.t(), String.t(), pid() | nil, keyword()) ::
           {:ok, String.t()} | {:error, term()}
