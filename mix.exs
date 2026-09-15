@@ -2,7 +2,7 @@ defmodule AmqpHelpers.MixProject do
   use Mix.Project
 
   @app :amqp_helpers
-  @version "1.6.1"
+  @version "1.7.0"
 
   def project do
     [
