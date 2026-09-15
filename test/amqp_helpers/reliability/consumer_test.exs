@@ -310,6 +310,130 @@ defmodule AMQPHelpers.Reliability.ConsumerTest do
     end
   end
 
+  describe "shutdown" do
+    @tag consumer_opts: [
+           shutdown_gracefully: true,
+           graceful_drain_on_shutdown: true,
+           shutdown_timeout: 100
+         ]
+    test "cancels consumer subscription on :shutdown signal when graceful_drain enabled", %{
+      consumer: consumer
+    } do
+      {parent, ref} = {self(), make_ref()}
+      chan = %{pid: spawn(fn -> Process.sleep(:infinity) end)}
+
+      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+      stub(AMQPMock, :fetch_application_channel, fn _chan_name -> {:ok, chan} end)
+      stub(AMQPMock, :consume, fn _chan, _queue, _pid, _opts -> {:ok, "tag"} end)
+
+      expect(AMQPMock, :cancel_consume, fn _chan, "tag", _opts ->
+        send(parent, {ref, :cancel_consume})
+      end)
+
+      Consumer.consume(consumer)
+
+      send(consumer, {:EXIT, self(), :shutdown})
+
+      assert_receive {^ref, :cancel_consume}
+    end
+
+    @tag consumer_opts: [shutdown_gracefully: true, graceful_drain_on_shutdown: false]
+    test "ignores :shutdown signal and keeps consuming when graceful_drain disabled", %{
+      consumer: consumer
+    } do
+      {parent, ref} = {self(), make_ref()}
+
+      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+
+      stub(AMQPMock, :fetch_application_channel, fn _chan_name ->
+        {:ok, %{pid: spawn(fn -> Process.sleep(:infinity) end)}}
+      end)
+
+      stub(AMQPMock, :consume, fn _chan, _queue, _pid, _opts -> {:ok, "tag"} end)
+
+      expect(AMQPMock, :ack, fn _chan, delivery_tag, _opts ->
+        assert 1 == delivery_tag
+        send(parent, {ref, :ack})
+      end)
+
+      Consumer.consume(consumer)
+
+      send(consumer, {:EXIT, self(), :shutdown})
+
+      Process.sleep(50)
+      assert Process.alive?(consumer)
+
+      send(consumer, {:basic_deliver, "bar", %{delivery_tag: 1}})
+
+      assert_receive {^ref, :ack}
+    end
+
+    @tag consumer_opts: [
+           shutdown_gracefully: true,
+           graceful_drain_on_shutdown: true,
+           shutdown_timeout: 50
+         ]
+    test "exits after shutdown_timeout expires", %{consumer: consumer} do
+      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+
+      stub(AMQPMock, :fetch_application_channel, fn _chan_name ->
+        {:ok, %{pid: spawn(fn -> Process.sleep(:infinity) end)}}
+      end)
+
+      stub(AMQPMock, :consume, fn _chan, _queue, _pid, _opts -> {:ok, "tag"} end)
+      stub(AMQPMock, :cancel_consume, fn _chan, _tag, _opts -> :ok end)
+
+      Consumer.consume(consumer)
+
+      send(consumer, {:EXIT, self(), :shutdown})
+
+      assert Process.alive?(consumer)
+      Process.sleep(100)
+      refute Process.alive?(consumer)
+    end
+
+    @tag consumer_opts: [
+           shutdown_gracefully: true,
+           graceful_drain_on_shutdown: true,
+           shutdown_timeout: 500
+         ]
+    test "allows in-flight handler to complete before timeout", %{consumer: consumer} do
+      {parent, ref} = {self(), make_ref()}
+
+      stub_with(AMQPMock, AMQPHelpers.Adapters.Stub)
+
+      message_handler = fn _payload, _meta ->
+        Process.sleep(50)
+        send(parent, {ref, :handler_completed})
+        :ok
+      end
+
+      opts = [
+        adapter: AMQPMock,
+        shutdown_gracefully: true,
+        graceful_drain_on_shutdown: true,
+        shutdown_timeout: 500,
+        consume_on_init: false,
+        queue_name: "foo",
+        message_handler: message_handler
+      ]
+
+      consumer = start_supervised!({Consumer, opts}, restart: :temporary, id: :test_consumer)
+
+      allow(AMQPMock, self(), consumer)
+
+      send(consumer, {:basic_consume_ok, %{consumer_tag: "foo"}})
+      send(consumer, {:basic_deliver, "bar", %{delivery_tag: 1}})
+
+      assert_receive {^ref, :handler_completed}
+
+      send(consumer, {:EXIT, self(), :shutdown})
+
+      Process.sleep(100)
+      refute Process.alive?(consumer)
+    end
+  end
+
   # TODO: Check logging
 
   #
